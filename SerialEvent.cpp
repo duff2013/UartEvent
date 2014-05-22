@@ -346,12 +346,10 @@ int SerialEvent::dma_RX_begin(void) {
             currentptr_rx1 = zeroptr_rx1;
             //Serial.printf("DMA_TCD1_DLASTSGA: %i\t| DMA_TCD1_DADDR: %p | zeroptr_rx1: %p\n\n",  DMA_TCD1_DLASTSGA, DMA_TCD1_DADDR, zeroptr_rx1);
         }
-        
         // Source and destination size 8 bit
         DMA_TCD1_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
         // Number of bytes to transfer (in each service request)
         DMA_TCD1_NBYTES_MLNO = 1;//UART0_TWFIFO;
-
         // Enable interrupt (end-of-major loop) / Clear ERQ bit at end of Major Loop
         DMA_TCD1_CSR = DMA_TCD_CSR_INTMAJOR  | DMA_TCD_CSR_DREQ | DMA_TCD_CSR_DONE;
         // Set Serial1 as source (CH 1), enable DMA MUX

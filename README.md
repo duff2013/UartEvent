@@ -11,7 +11,7 @@ Events that are supported currently are:
 <br>
 <b>Transmitting</b><br>
 
-<b>Recieving</b><br>
+><b>Recieving</b><br>
 
 <br>
 The performance is on par with the Hardware Serial Class in the Teensduino core<br>

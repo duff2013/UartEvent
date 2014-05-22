@@ -3,14 +3,14 @@ SerialEvent
 
 <h3>Teensy 3.0/3.1 SerialEvent Library</h3>
 
-SerialEvents use DMA for transferring and Receiving data in the "background" making a full-duplex serial communications more possible. By using the DMA to handle the serial i/o you can lesson the load on the Teensy while sending and receiving. This library intends to hand over more control to the user by using Events which give you more flexablity.
+SerialEvents use DMA for transferring and Receiving data in the "background" making a full-duplex serial communications more possible. By using the DMA to handle the serial i/o you can lesson the load on the Teensy while sending and receiving. This library intends to hand over more control to the user by using Events which give you more flexibility.
 Events that are supported currently are:<br>
 1.  Receive Buffer Full<br>
 2.  Read Bytes Until<br>
 3.  1 Byte Receive<br>
 
 <b>Transmitting:</b><br>
-> While traditional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine, SerialEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the this class inhertiants base is "Print" most of the normal print statements work as you would expect.<br><br>
+> While traditional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine, SerialEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the this base class is "Print" most of the normal print statements work as you would expect.<br><br>
 Care must be taken because currently the library uses dynamic memory to send data. While small data transfers are safe for the most part large data transfers can use up considerable ram, up to 5520 bytes, so budgeting your memory is critical.<br>
 
 <b>Receiving:</b><br>

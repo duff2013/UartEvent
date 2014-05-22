@@ -6,8 +6,9 @@ SerialEvent
 <b>Overview:</b><br>
 >SerialEvents use DMA for transfering data in the "background".
 Events that are supported currently are: 
-1. Recieve Buffer Full
-2. Read Bytes Until
+1. Recieve Buffer Full<br>
+2. Read Bytes Until<br>
+
 <br>
 The performance is on par with the Hardware Serial Class in the Teensduino core<br>
 but is a little slower in actual sending because of the DMA setup overhead. I'm<br>

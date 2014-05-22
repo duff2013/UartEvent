@@ -4,16 +4,19 @@ SerialEvent
 <h3>Teensy 3.0/3.1 SerialEvent Library</h3>
 
 <b>Overview:</b><br>
->SerialEvents use DMA for transfering data in the "background".
-Events that are supported currently are: 
-1. Recieve Buffer Full<br>
-2. Read Bytes Until<br>
-<br>
-<b>Transmitting</b><br>
+>SerialEvents use DMA for transfering and Recieving data in the "background". 
+Events that are supported currently are:<br>
+1.  Recieve Buffer Full<br>
+2.  Read Bytes Until<br>
 
-><b>Recieving</b><br>
+<b>Transmitting:</b><br>
+> While tradional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine SerialEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the this class's base is Print most of the normal print statements work as you would expect.<br>
+Care must be taken because currently the library uses dynamic memory to send data. While small data transfers are safe for the most part large data transfers can use up considerable ram, up to 5520 bytes, so budgiting your memory is critical.<br>
 
+<b>Recieving:</b><br>
+> Users have more control over how they want to capture data using this library. 
 <br>
+
 The performance is on par with the Hardware Serial Class in the Teensduino core<br>
 but is a little slower in actual sending because of the DMA setup overhead. I'm<br>
 working on speeding this up. While the actual sending of the data is slower the<br>

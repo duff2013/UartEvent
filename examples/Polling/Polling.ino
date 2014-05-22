@@ -1,7 +1,4 @@
 /*****************************************************
- * SerialEvent uses DMA for RX, TX which reduces CPU
- * load.
- *
  * This SerialEvent example shows the simple use of
  * polling to receive data using Serial1 port. While 
  * this example does not do anything special but use 
@@ -11,22 +8,25 @@
  *****************************************************/
 #include <SerialEvent.h>
 
-SerialEvent Event1 = SerialEvent();
+SerialEvent pollEvent = SerialEvent();
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
-  //---------------------------------------------------------------------------------------------
-  /* The following must be defined for this Serial DMA library to work */
-  Event1.loopBack = false; // internal loopback set / "default = false"
-  Event1.port = &Serial1; // set port to Serial1
-  Event1.begin(9600);// start Serial1 DMA
-  //---------------------------------------------------------------------------------------------
+  /****************************************************
+   * The following is the minmum that must be defined 
+   * for this SerialEvent library to work.
+   ****************************************************/
+//--------------------------------------------------------------------------------------
+  pollEvent.port = &Serial1; // set port to Serial1, this must be called before "begin"
+  pollEvent.begin(9600);// start SerialEvent using Hardware Serial1
+//--------------------------------------------------------------------------------------
 }
 
 void loop() {
-  if(Event1.available()) {
-    char c = Event1.read();
+  if(pollEvent.available()) {
+    char c = pollEvent.read();
     Serial.print(c);
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }
 }
 

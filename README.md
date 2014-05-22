@@ -8,6 +8,10 @@ SerialEvent
 Events that are supported currently are: 
 1. Recieve Buffer Full<br>
 2. Read Bytes Until<br>
+<br>
+<b>Transmitting</b><br>
+
+<b>Recieving</b><br>
 
 <br>
 The performance is on par with the Hardware Serial Class in the Teensduino core<br>

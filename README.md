@@ -1,7 +1,7 @@
 SerialEvent
 =========
 
-#Teensy 3.0/3.1 SerialEvent Library
+<h3>Teensy 3.0/3.1 SerialEvent Library</h3>
 
 <b>Overview:</b><br>
 >SerialEvents use DMA for transfering data in the "background".

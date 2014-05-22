@@ -1,0 +1,25 @@
+#######################################
+# Syntax Coloring Map SerialEvent
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+SerialEvent	KEYWORD1
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+loopBack	KEYWORD2
+port	KEYWORD2
+txEventHandler	KEYWORD2
+rxEventHandler	KEYWORD2
+rxBuffer	KEYWORD2
+rxBufferSize	KEYWORD2
+termCharacter	KEYWORD2
+#######################################
+# Instances (KEYWORD2)
+#######################################
+
+#######################################
+# Constants (LITERAL1)
+#######################################

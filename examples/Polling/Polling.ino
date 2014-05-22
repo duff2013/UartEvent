@@ -12,14 +12,14 @@ SerialEvent pollEvent = SerialEvent();
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
-  /****************************************************
-   * The following is the minmum that must be defined 
-   * for this SerialEvent library to work.
-   ****************************************************/
-//--------------------------------------------------------------------------------------
-  pollEvent.port = &Serial1; // set port to Serial1, this must be called before "begin"
-  pollEvent.begin(9600);// start SerialEvent using Hardware Serial1
-//--------------------------------------------------------------------------------------
+/****************************************************
+ * The following is the minmum that must be defined
+ * for this SerialEvent library to work.
+ ****************************************************/
+  // set port to Serial1, this must be called before "begin"
+  pollEvent.port = &Serial1;
+  // start SerialEvent using Hardware Serial1
+  pollEvent.begin(9600);
 }
 
 void loop() {

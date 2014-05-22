@@ -585,10 +585,6 @@ int SerialEvent::dma_peek( void ) {
     }
     else return -1;
 }
-// -----------------------------------------------read---------------------------------------------------------------
-/*size_t SerialEvent::dma_readBytesUntil( char terminator, char *buffer, size_t length ) {
-    
-}*/
 // -----------------------------------------------flush--------------------------------------------------------------
 int SerialEvent::dma_flush( void ) {
     while ( SerialEvent::txCount > 0 ) yield();

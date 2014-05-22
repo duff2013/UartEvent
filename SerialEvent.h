@@ -115,8 +115,6 @@ public:
 	virtual void flush      ( void ){ dma_flush(); }
 	virtual void clear      ( void ){ dma_clear(); }
     
-    //size_t readBytesUntil(char terminator, char *buffer, size_t length) {dma_readBytesUntil(terminator, buffer, length);}
-    
 	size_t write( uint8_t c ) {
         dma_write( (char*)&c, 1 );
         return 1;

@@ -8,6 +8,7 @@ Events that are supported currently are:<br>
 1.  Receive Buffer Full<br>
 2.  Read Bytes Until<br>
 3.  1 Byte Receive<br>
+4.  Transmit Complete<br>
 
 <b>Transmitting:</b><br>
 > While traditional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine, SerialEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the base class is "Print" most of the normal print statements work as you would expect.<br><br>

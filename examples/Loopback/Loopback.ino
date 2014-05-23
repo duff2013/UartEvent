@@ -34,7 +34,7 @@ void setup() {
     Event1.rxEventHandler = rx1Event;// event handler Serial1 RX
     Event1.rxBuffer = rx1Buffer;// user supplied variable to hold incoming Serial1 data
     Event1.rxBufferSize = sizeof(rx1Buffer); // size of the RX buffer
-    Event1.begin(9600);// start Serial1 DMA
+    Event1.begin(9600);// start Serial1
 //---------------------------------------------------------------------------------------
 }
 

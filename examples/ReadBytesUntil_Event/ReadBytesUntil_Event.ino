@@ -20,7 +20,6 @@ SerialEvent Event1 = SerialEvent();
 char rx1Buffer[128];
 
 void setup() {
-    //logger = MAX_ON;
     pinMode(LED_BUILTIN, OUTPUT);
     Serial.begin(0);
     while(!Serial);

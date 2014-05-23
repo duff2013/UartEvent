@@ -87,12 +87,18 @@ private:
     static volatile uint16_t bufSize_rx1;
     static volatile uint16_t bufSize_rx2;
     static volatile uint16_t bufSize_rx3;
+    
     static volatile uint8_t term_rx1;
     static volatile uint8_t term_rx2;
     static volatile uint8_t term_rx3;
 
-    static volatile uint32_t *currentptr_rx1;
-    static volatile uint32_t *zeroptr_rx1;
+    static volatile uintptr_t *currentptr_rx1;
+    static volatile uintptr_t *currentptr_rx2;
+    static volatile uintptr_t *currentptr_rx3;
+    
+    static volatile uintptr_t *zeroptr_rx1;
+    static volatile uintptr_t *zeroptr_rx2;
+    static volatile uintptr_t *zeroptr_rx3;
     
     static bool dma_ch_enabled[4];
     
@@ -106,20 +112,19 @@ private:
 public:
     
 	SerialEvent();
-    
     void begin              ( uint32_t baud, uint32_t format = SERIAL_8N1 );
     virtual void end        ( void ){ dma_end(); }
     virtual int available   ( void ){ return dma_available(); }
     virtual int peek        ( void ){ return dma_peek(); }
-	virtual int read        ( void ){ return dma_getchar(); }
-	virtual void flush      ( void ){ dma_flush(); }
-	virtual void clear      ( void ){ dma_clear(); }
+    virtual int read        ( void ){ return dma_getchar(); }
+    virtual void flush      ( void ){ dma_flush(); }
+    virtual void clear      ( void ){ dma_clear(); }
     
-	size_t write( uint8_t c ) {
+    size_t write( uint8_t c ) {
         dma_write( (char*)&c, 1 );
         return 1;
     }
-	size_t write( const uint8_t *buffer, size_t size ) {
+    size_t write( const uint8_t *buffer, size_t size ) {
         int error;
         error = dma_write( (char *)buffer, size );
         if (error == -1) return -1;

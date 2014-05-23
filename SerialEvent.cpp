@@ -61,21 +61,27 @@ SerialEvent::ISR SerialEvent::RX2_CALLBACK;
 SerialEvent::ISR SerialEvent::RX3_CALLBACK;
 
 volatile bool SerialEvent::txDone;
+volatile int SerialEvent::txCount;
 
 volatile uint32_t SerialEvent::txHead;
 volatile uint32_t SerialEvent::txTail;
 volatile uint32_t SerialEvent::_memory;
+
 volatile uint16_t SerialEvent::bufSize_rx1;
 volatile uint16_t SerialEvent::bufSize_rx2;
 volatile uint16_t SerialEvent::bufSize_rx3;
+
 volatile uint8_t SerialEvent::term_rx1;
 volatile uint8_t SerialEvent::term_rx2;
 volatile uint8_t SerialEvent::term_rx3;
 
-volatile uint32_t *SerialEvent::currentptr_rx1;
-volatile uint32_t *SerialEvent::zeroptr_rx1;
+volatile uintptr_t *SerialEvent::currentptr_rx1;
+volatile uintptr_t *SerialEvent::currentptr_rx2;
+volatile uintptr_t *SerialEvent::currentptr_rx3;
 
-volatile int SerialEvent::txCount;
+volatile uintptr_t *SerialEvent::zeroptr_rx1;
+volatile uintptr_t *SerialEvent::zeroptr_rx2;
+volatile uintptr_t *SerialEvent::zeroptr_rx3;
 
 bool SerialEvent::dma_ch_enabled[4];
 
@@ -84,13 +90,10 @@ DMAMEM static tx_fifo_t txfifo[TX_FIFO_SIZE];
 
 // -----------------------------------------------ch0_isr------------------------------------------------------------
 void dma_ch0_isr() {
-    
     // clear dma interrupt request 0
     DMA_CINT |= DMA_CINT_CINT(0);
-    
     // access fifo to free already sent packet
     tx_fifo_t* sent = &txfifo[SerialEvent::txTail];
-    
     // check if packet is allocated on the buffer
     if (sent->allocated) {
         // reduce packet count in fifo
@@ -108,7 +111,6 @@ void dma_ch0_isr() {
         SerialEvent::txTail = SerialEvent::txTail < (TX_FIFO_SIZE - 1) ? SerialEvent::txTail + 1 : 0;
         return;
     }
-    
     // increment fifo tail
     SerialEvent::txTail = SerialEvent::txTail < (TX_FIFO_SIZE - 1) ? SerialEvent::txTail + 1 : 0;
     // user or default tx callback event
@@ -141,7 +143,6 @@ void dma_ch0_isr() {
             DMAMUX0_CHCFG0 &= ~0x3F;
             DMAMUX0_CHCFG0 |= DMAMUX_SOURCE_UART2_TX;
         }
-        
         DMA_TCD0_CITER_ELINKNO = queued->size;
         DMA_TCD0_BITER_ELINKNO = queued->size;
         DMA_TCD0_SADDR = queued->packet;
@@ -154,7 +155,6 @@ void dma_ch0_isr() {
         SerialEvent::txDone = true;
         return;
     }
-    
 }
 // -----------------------------------------------ch1_isr------------------------------------------------------------
 void dma_ch1_isr() {
@@ -163,57 +163,77 @@ void dma_ch1_isr() {
     // Enable DMA Request 1
     BITBAND_U32(DMA_ERQ, 1) = 0x01;
     //DMA_ERQ |= DMA_ERQ_ERQ1;
-    if (SerialEvent::term_rx1 != NULL) {
+    if (SerialEvent::term_rx1 != 0) {
         static uint16_t byteCount_rx1 = 0;
-        
         if (( (uint8_t)*SerialEvent::currentptr_rx1 == SerialEvent::term_rx1) || ( byteCount_rx1 == (SerialEvent::bufSize_rx1-1) )) {
-            SerialEvent::currentptr_rx1 = (uint32_t*)DMA_TCD1_DADDR;
+            SerialEvent::currentptr_rx1 = (uintptr_t*)DMA_TCD1_DADDR;
             DMA_TCD1_DADDR = SerialEvent::zeroptr_rx1;
             byteCount_rx1 = 0;
             *SerialEvent::currentptr_rx1 = 0;
             SerialEvent::RX1_CALLBACK();
         }
-        else {
-            byteCount_rx1++;
-        }
-        
-        SerialEvent::currentptr_rx1 = (uint32_t*)DMA_TCD1_DADDR;
+        else { byteCount_rx1++; }
+        SerialEvent::currentptr_rx1 = (uintptr_t*)DMA_TCD1_DADDR;
     }
     else {
         // user or default rx1 callback event
         SerialEvent::RX1_CALLBACK();
     }
-    
-
 }
 // -----------------------------------------------ch2_isr------------------------------------------------------------
 void dma_ch2_isr() {
     // Clear Interrupt Request 2
     DMA_CINT |= DMA_CINT_CINT(2);
     // Enable DMA Request 2
-    DMA_ERQ |= DMA_ERQ_ERQ2;
-    // user or default rx2 callback event
-    SerialEvent::RX2_CALLBACK();
+    BITBAND_U32(DMA_ERQ, 2) = 0x01;
+    if (SerialEvent::term_rx2 != 0) {
+        static uint16_t byteCount_rx2 = 0;
+        if (( (uint8_t)*SerialEvent::currentptr_rx2 == SerialEvent::term_rx2) || ( byteCount_rx2 == (SerialEvent::bufSize_rx2-1) )) {
+            SerialEvent::currentptr_rx2 = (uintptr_t*)DMA_TCD2_DADDR;
+            DMA_TCD2_DADDR = SerialEvent::zeroptr_rx2;
+            byteCount_rx2 = 0;
+            *SerialEvent::currentptr_rx2 = 0;
+            SerialEvent::RX2_CALLBACK();
+        }
+        else { byteCount_rx2++; }
+        SerialEvent::currentptr_rx2 = (uintptr_t*)DMA_TCD2_DADDR;
+    }
+    else {
+        // user or default rx2 callback event
+        SerialEvent::RX2_CALLBACK();
+    }
 }
 // -----------------------------------------------ch3_isr------------------------------------------------------------
 void dma_ch3_isr() {
     // Clear Interrupt Request 3
     DMA_CINT |= DMA_CINT_CINT(3);
     // Enable DMA Request 3
-    DMA_ERQ |= DMA_ERQ_ERQ3;
-    // user or default rx3 callback event
-    SerialEvent::RX3_CALLBACK();
+    BITBAND_U32(DMA_ERQ, 3) = 0x01;
+    if (SerialEvent::term_rx3 != 0) {
+        static uint16_t byteCount_rx3 = 0;
+        if (( (uint8_t)*SerialEvent::currentptr_rx3 == SerialEvent::term_rx3) || ( byteCount_rx3 == (SerialEvent::bufSize_rx3-1) )) {
+            SerialEvent::currentptr_rx3 = (uintptr_t*)DMA_TCD3_DADDR;
+            DMA_TCD3_DADDR = SerialEvent::zeroptr_rx3;
+            byteCount_rx3 = 0;
+            *SerialEvent::currentptr_rx3 = 0;
+            SerialEvent::RX3_CALLBACK();
+        }
+        else { byteCount_rx3++; }
+        SerialEvent::currentptr_rx3 = (uintptr_t*)DMA_TCD3_DADDR;
+    }
+    else {
+        // user or default rx3 callback event
+        SerialEvent::RX3_CALLBACK();
+    }
 }
-
 // -------------------------------------------Constructor------------------------------------------------------------
 SerialEvent::SerialEvent() :
     txEventHandler(defaultCallback),
     rxEventHandler(defaultCallback),
     rxBuffer(defaultBuffer_RX),
-    termCharacter(NULL),
     rxBufferSize(2),
     loopBack(false),
-    rxTail(0)
+    termCharacter(0)
 {
     txHead = 0;
     txTail = 0;
@@ -326,13 +346,13 @@ int SerialEvent::dma_RX_begin(void) {
         DMA_TCD1_DADDR = &rxBuffer[0];
         // Destination offset (0 byte)
         DMA_TCD1_DOFF = 1;
-        if (termCharacter == NULL) {
+        if (termCharacter == 0) {
             // Restore destination address after major loop
             DMA_TCD1_DLASTSGA = -(rxBufferSize);
             // Set loop counts / channel2channel linking disabled
             DMA_TCD1_CITER_ELINKNO = rxBufferSize;//UART0_RWFIFO;
             DMA_TCD1_BITER_ELINKNO = rxBufferSize;//UART0_RWFIFO;
-            term_rx1 = NULL;
+            term_rx1 = 0;
         }
         else {
             // Restore destination address after major loop
@@ -342,9 +362,9 @@ int SerialEvent::dma_RX_begin(void) {
             DMA_TCD1_BITER_ELINKNO = 1;//UART0_RWFIFO;
             term_rx1 = termCharacter;
             bufSize_rx1 = rxBufferSize;
-            zeroptr_rx1 = (uint32_t*)DMA_TCD1_DADDR;
+            zeroptr_rx1 = (uintptr_t*)DMA_TCD1_DADDR;
             currentptr_rx1 = zeroptr_rx1;
-            //Serial.printf("DMA_TCD1_DLASTSGA: %i\t| DMA_TCD1_DADDR: %p | zeroptr_rx1: %p\n\n",  DMA_TCD1_DLASTSGA, DMA_TCD1_DADDR, zeroptr_rx1);
+            Serial.printf("DMA_TCD1_DLASTSGA: %i\t| DMA_TCD1_DADDR: %p | zeroptr_rx1: %p\n\n",  DMA_TCD1_DLASTSGA, DMA_TCD1_DADDR, zeroptr_rx1);
         }
         // Source and destination size 8 bit
         DMA_TCD1_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
@@ -375,15 +395,30 @@ int SerialEvent::dma_RX_begin(void) {
         DMA_TCD2_DADDR = rxBuffer;
         // Destination offset (0 byte)
         DMA_TCD2_DOFF = 1;
-        // Restore destination address after major loop
-        DMA_TCD2_DLASTSGA = -(rxBufferSize);
+        if (termCharacter == 0) {
+            // Restore destination address after major loop
+            DMA_TCD2_DLASTSGA = -(rxBufferSize);
+            // Set loop counts / channel2channel linking disabled
+            DMA_TCD2_CITER_ELINKNO = rxBufferSize;//UART0_RWFIFO;
+            DMA_TCD2_BITER_ELINKNO = rxBufferSize;//UART0_RWFIFO;
+            term_rx2 = 0;
+        }
+        else {
+            // Restore destination address after major loop
+            DMA_TCD2_DLASTSGA = 0;
+            // Set loop counts / channel2channel linking disabled
+            DMA_TCD2_CITER_ELINKNO = 1;//UART0_RWFIFO;
+            DMA_TCD2_BITER_ELINKNO = 1;//UART0_RWFIFO;
+            term_rx2 = termCharacter;
+            bufSize_rx2 = rxBufferSize;
+            zeroptr_rx2 = (uintptr_t*)DMA_TCD2_DADDR;
+            currentptr_rx2 = zeroptr_rx2;
+            //Serial.printf("DMA_TCD2_DLASTSGA: %i\t| DMA_TCD2_DADDR: %p | zeroptr_rx1: %p\n\n",  DMA_TCD2_DLASTSGA, DMA_TCD2_DADDR, zeroptr_rx2);
+        }
         // Source and destination size 8 bit
         DMA_TCD2_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
         // Number of bytes to transfer (in each service request)
         DMA_TCD2_NBYTES_MLNO = 1;
-        // Set loop counts / channel2channel linking disabled
-        DMA_TCD2_CITER_ELINKNO =  rxBufferSize;
-        DMA_TCD2_BITER_ELINKNO =  rxBufferSize;
         // Enable interrupt (end-of-major loop) / Clear ERQ bit at end of Major Loop
         DMA_TCD2_CSR = DMA_TCD_CSR_INTMAJOR | DMA_TCD_CSR_DREQ | DMA_TCD_CSR_DONE;
         // Set Serial2 as source (CH 2), enable DMA MUX
@@ -408,15 +443,30 @@ int SerialEvent::dma_RX_begin(void) {
         DMA_TCD3_DADDR = rxBuffer;
         // Destination offset (0 byte)
         DMA_TCD3_DOFF = 1;
-        // Restore destination address after major loop
-        DMA_TCD3_DLASTSGA = -(rxBufferSize);
+        if (termCharacter == 0) {
+            // Restore destination address after major loop
+            DMA_TCD3_DLASTSGA = -(rxBufferSize);
+            // Set loop counts / channel2channel linking disabled
+            DMA_TCD3_CITER_ELINKNO = rxBufferSize;//UART0_RWFIFO;
+            DMA_TCD3_BITER_ELINKNO = rxBufferSize;//UART0_RWFIFO;
+            term_rx3 = 0;
+        }
+        else {
+            // Restore destination address after major loop
+            DMA_TCD3_DLASTSGA = 0;
+            // Set loop counts / channel2channel linking disabled
+            DMA_TCD3_CITER_ELINKNO = 1;//UART0_RWFIFO;
+            DMA_TCD3_BITER_ELINKNO = 1;//UART0_RWFIFO;
+            term_rx3 = termCharacter;
+            bufSize_rx3 = rxBufferSize;
+            zeroptr_rx3 = (uintptr_t*)DMA_TCD3_DADDR;
+            currentptr_rx3 = zeroptr_rx3;
+            //Serial.printf("DMA_TCD3_DLASTSGA: %i\t| DMA_TCD3_DADDR: %p | zeroptr_rx3: %p\n\n",  DMA_TCD3_DLASTSGA, DMA_TCD3_DADDR, zeroptr_rx3);
+        }
         // Source and destination size 8 bit
         DMA_TCD3_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
         // Number of bytes to transfer (in each service request)
         DMA_TCD3_NBYTES_MLNO = 1;
-        // Set loop counts / channel2channel linking disabled
-        DMA_TCD3_CITER_ELINKNO =  rxBufferSize;
-        DMA_TCD3_BITER_ELINKNO =  rxBufferSize;
         // Enable interrupt (end-of-major loop) / Clear ERQ bit at end of Major Loop
         DMA_TCD3_CSR = DMA_TCD_CSR_INTMAJOR | DMA_TCD_CSR_DREQ | DMA_TCD_CSR_DONE;
         // Set Serial3 as source (CH 3), enable DMA MUX
@@ -432,13 +482,11 @@ int SerialEvent::dma_RX_begin(void) {
     else {
         return -1;
     }
-    
 }
 // -----------------------------------------------end----------------------------------------------------------------
 int SerialEvent::dma_end( void ) {
      if (!(SIM_SCGC7 & SIM_SCGC7_DMA)) return -1;
      if (!(SIM_SCGC6 & SIM_SCGC6_DMAMUX)) return -1;
-     
      // make sure all queued packets all transmeitted and nothing
      // is being read into each rx port.
      while ( SerialEvent::txCount > 0 ) yield();
@@ -446,9 +494,7 @@ int SerialEvent::dma_end( void ) {
      while (RECIEVE_DONE_RX1) yield();
      while (RECIEVE_DONE_RX2) yield();
      while (RECIEVE_DONE_RX3) yield();
-     
      delay(20);
-     
      if (this->current_port == SERIAL1) {
          NVIC_DISABLE_IRQ(IRQ_DMA_CH1);
         //Serial.println("Serial1");
@@ -476,24 +522,20 @@ int SerialEvent::dma_end( void ) {
      else {
          return -1;
      }
-     
      bool  allDone = ( !( dma_ch_enabled[1]) && !(dma_ch_enabled[2]) && !(dma_ch_enabled[3]) );
      if (allDone) {
          NVIC_DISABLE_IRQ(IRQ_DMA_CH0);
          NVIC_DISABLE_IRQ(IRQ_DMA_CH1);
          NVIC_DISABLE_IRQ(IRQ_DMA_CH2);
          NVIC_DISABLE_IRQ(IRQ_DMA_CH3);
-         
          txHead = 0;
          txTail = 0;
          txCount = 0;
      }
-     
      return this->current_port;
  }
  // --------------------------------------------available------------------------------------------------------------
 int SerialEvent::dma_available(void) {
-    //Serial.printf("head: %i | tail: %i | DMA_TCD1_CITER_ELINKNO: %i\n", head, tail, DMA_TCD1_CITER_ELINKNO);
     if ( this->current_port == SERIAL1 ) {
         uint32_t head, tail;
         head = this->rxBufferSize - DMA_TCD1_CITER_ELINKNO;
@@ -519,7 +561,6 @@ int SerialEvent::dma_available(void) {
 }
 // ----------------------------------------------getchar-------------------------------------------------------------
 int SerialEvent::dma_getchar(void) {
-    //Serial.printf("head: %i | tail: %i | DMA_TCD1_CITER_ELINKNO: %i\n", head, tail, DMA_TCD1_CITER_ELINKNO);
     if ( this->current_port == SERIAL1 ) {
         uint32_t head, tail;
         int c;
@@ -557,36 +598,52 @@ int SerialEvent::dma_getchar(void) {
 }
 // -----------------------------------------------peek---------------------------------------------------------------
 int SerialEvent::dma_peek( void ) {
+    uint32_t head, tail;
+    int c;
     if ( this->current_port == SERIAL1 ) {
-        uint32_t head, tail;
-        head = this->rxBufferSize - DMA_TCD1_CITER_ELINKNO;
-        tail = this->rxTail;
-        if (head == tail) return -1;
-        if (++tail >= this->rxBufferSize) tail = 0;
-        return this->rxBuffer[tail];
+        head = rxBufferSize - DMA_TCD1_CITER_ELINKNO;
     }
     else if ( this->current_port == SERIAL2 ) {
-        uint32_t head, tail;
-        head = this->rxBufferSize - DMA_TCD2_CITER_ELINKNO;
-        tail = this->rxTail;
-        if (head == tail) return -1;
-        if (++tail >= this->rxBufferSize) tail = 0;
-        return this->rxBuffer[tail];
+        head = rxBufferSize - DMA_TCD2_CITER_ELINKNO;
     }
     else if ( this->current_port == SERIAL3 ) {
-        uint32_t head, tail;
+        head = rxBufferSize - DMA_TCD3_CITER_ELINKNO;
+    }
+    else return -1;
+    tail = rxTail;
+    c = rxBuffer[tail];
+    if (head == tail) return -1;
+    if (++tail >= rxBufferSize) tail = 0;
+    return c;
+    /*if ( this->current_port == SERIAL1 ) {
+        head = rxBufferSize - DMA_TCD1_CITER_ELINKNO;
+        tail = rxTail;
+        c = rxBuffer[tail];
+        if (head == tail) return -1;
+        if (++tail >= rxBufferSize) tail = 0;
+        return c;
+    }
+    else if ( this->current_port == SERIAL2 ) {
+        head = this->rxBufferSize - DMA_TCD2_CITER_ELINKNO;
+        tail = this->rxTail;
+        c = this->rxBuffer[tail];
+        if (head == tail) return -1;
+        if (++tail >= this->rxBufferSize) tail = 0;
+        return c;
+    }
+    else if ( this->current_port == SERIAL3 ) {
         head = this->rxBufferSize - DMA_TCD3_CITER_ELINKNO;
         tail = this->rxTail;
         if (head == tail) return -1;
         if (++tail >= this->rxBufferSize) tail = 0;
         return this->rxBuffer[tail];
-    }
-    else return -1;
+    }*/
 }
 // -----------------------------------------------flush--------------------------------------------------------------
 int SerialEvent::dma_flush( void ) {
     while ( SerialEvent::txCount > 0 ) yield();
     while (SEND_DONE_TX) yield();
+    return 1;
 }
 // -----------------------------------------------clear--------------------------------------------------------------
 int SerialEvent::dma_clear( void ) {
@@ -605,6 +662,7 @@ int SerialEvent::dma_clear( void ) {
     }
     txTail = txHead;
     SerialEvent::txCount--;
+    return 1;
 }
 // -----------------------------------------------end----------------------------------------------------------------
 inline int SerialEvent::dma_write( char* data, uint32_t size )  {
@@ -620,7 +678,6 @@ inline int SerialEvent::dma_write( char* data, uint32_t size )  {
     //-----------------------------------------------------------------
     // here we insert new items into the fifo circular buffer
     tx_fifo_t* p = &txfifo[txHead];
-    
     // get out if already allocated
     if (p->allocated) {
         Serial.println("ERROR: ALLOCATE FAILED");
@@ -633,14 +690,12 @@ inline int SerialEvent::dma_write( char* data, uint32_t size )  {
     p->allocated = true;
     // update tx event callback for specific port
     p->txEventHandler = txEventHandler;
-    
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         // make some space
         p->packet = new char[size];
         // fill fifo buffer with user packet
         memcpy(p->packet, data, size);
     }
-    
     // packet count
     txCount++;
     // fifo head
@@ -649,7 +704,6 @@ inline int SerialEvent::dma_write( char* data, uint32_t size )  {
     // return if packets are still in transmission
     if(!txDone) return txCount;
     //------------------------------------------------------------------
-    
     if ( this->current_port == SERIAL1 ) {
         // DMA transfer requests enabled
         BITBAND_U8(UART0_C2, 7) = 0x01;
@@ -682,19 +736,16 @@ inline int SerialEvent::dma_write( char* data, uint32_t size )  {
     else {
         return -1;
     }
-    
     // set minor loop counts
     DMA_TCD0_CITER_ELINKNO = p->size;
     DMA_TCD0_BITER_ELINKNO = p->size;
     // source address
     DMA_TCD0_SADDR = p->packet;
     BITBAND_U32(DMA_ERQ, 0x00) = 0x01;
-    //DMA_ERQ |= DMA_ERQ_ERQ0;
     //------------------------------------------------------------------
     // siganl packet transmission in progress, start adding to buffer
     txDone = false;
     return txCount;
-    
 }
 
 /*void SerialEvent::memcpy8(volatile char *dest, const char *src, unsigned int count) {

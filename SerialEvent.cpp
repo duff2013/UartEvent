@@ -505,8 +505,9 @@ int SerialEvent::dma_end( void ) {
     if (!(SIM_SCGC6 & SIM_SCGC6_DMAMUX)) return -1;
     // make sure all queued packets all transmeitted and nothing
     // is being read into each rx port.
-    while ( SerialEvent::txCount > 0 ) yield();
+    while ( txCount > 0 ) yield();
     while (SEND_DONE_TX) yield();
+    delay(20);
     if (dma_ch_enabled[SERIAL1]) {
         while (RECIEVE_DONE_RX1) yield();
     }
@@ -550,7 +551,6 @@ int SerialEvent::dma_end( void ) {
         txTail = 0;
         txCount = 0;
     }
-    Serial.println();
     return this->current_port;
 }
  // --------------------------------------------available------------------------------------------------------------

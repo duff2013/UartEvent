@@ -27,4 +27,4 @@ The DMA engine allows you to receive data which will signal an event handler tha
 </ul>
 
 <b>Usage:</b><br>
->Since your event functions are called from interrupts make sure you declare any variables used the event handler as volatile!
+>Since your event functions are called from interrupts make sure you declare any variables used in the event handler as volatile!

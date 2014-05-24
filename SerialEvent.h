@@ -120,7 +120,6 @@ public:
     virtual int read        ( void ){ return dma_getchar(); }
     virtual void flush      ( void ){ dma_flush(); }
     virtual void clear      ( void ){ dma_clear(); }
-    
     size_t write( uint8_t c ) {
         int error;
         error = dma_write( &c, 1 );

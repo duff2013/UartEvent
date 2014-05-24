@@ -25,3 +25,6 @@ The DMA engine allows you to receive data which will signal an event handler tha
 <b>Performance:</b><br>
 >The performance is on par with the Hardware Serial Class in the Teensduino core but is a little slower in actual sending because of the DMA setup overhead. I'm working on speeding this up. While the actual sending of the data is slower the process of sending data is much faster in that it only takes microseconds to get through the print statement no matter what baud rate. Sending a 4000 byte packet takes about ~1200 microseconds compared to ~82000 microseconds with the normal Uart print method at 115200. This is because the FIFO is a packet based buffer instead of a byte based. Multiple packets can be stored with 5520 bytes total maximum currently.<br>
 </ul>
+
+<b>Usage:</b><br>
+Since your event functions are called from interrupts make sure you declare any variables as volatile!

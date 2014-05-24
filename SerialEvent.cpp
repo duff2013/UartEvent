@@ -672,7 +672,6 @@ int SerialEvent::dma_clear( void ) {
     txCount = 0;
     while (SEND_DONE_TX) yield();
     while (--fifoSize) {
-        Serial.printf("fifoSize: %i\n", i);
         tx_fifo_t* queued = &txfifo[i];
         if (queued->allocated) {
             // update memory var, since we are releasing it here

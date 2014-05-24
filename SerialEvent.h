@@ -38,12 +38,12 @@
  */
 #include "Arduino.h"
 
-const size_t TX_FIFO_SIZE = 64;
+const size_t TX_FIFO_SIZE = 32;
 typedef struct transmit_fifo_t {
 private:
     typedef void (*EVENT)();
 public:
-    char *packet;
+    char* volatile packet;
     volatile uint16_t size;
     volatile uint8_t port;
     volatile bool allocated;
@@ -64,7 +64,7 @@ private:
     
     int dma_TX_begin            ( void );
     int dma_RX_begin            ( void );
-    int dma_write               ( char* data, uint32_t size ) ;
+    int dma_write               ( const uint8_t* data, uint32_t size ) ;
     int dma_end                 ( void );
     int dma_available           ( void );
     int dma_getchar             ( void );
@@ -91,7 +91,7 @@ private:
     static volatile uint8_t term_rx1;
     static volatile uint8_t term_rx2;
     static volatile uint8_t term_rx3;
-
+    
     static volatile uintptr_t *currentptr_rx1;
     static volatile uintptr_t *currentptr_rx2;
     static volatile uintptr_t *currentptr_rx3;
@@ -110,8 +110,9 @@ private:
     uint8_t current_port;
     enum { SERIAL1 = 1, SERIAL2 = 2, SERIAL3 = 3 };
 public:
-    
-	SerialEvent();
+    SerialEvent();
+    SerialEvent(uint32_t memmory);
+    ~SerialEvent()          { dma_end(); }
     void begin              ( uint32_t baud, uint32_t format = SERIAL_8N1 );
     virtual void end        ( void ){ dma_end(); }
     virtual int available   ( void ){ return dma_available(); }
@@ -121,12 +122,14 @@ public:
     virtual void clear      ( void ){ dma_clear(); }
     
     size_t write( uint8_t c ) {
-        dma_write( (char*)&c, 1 );
+        int error;
+        error = dma_write( &c, 1 );
+        if (error == -1) return -1;
         return 1;
     }
     size_t write( const uint8_t *buffer, size_t size ) {
         int error;
-        error = dma_write( (char *)buffer, size );
+        error = dma_write( buffer, size );
         if (error == -1) return -1;
         return size;
     }

@@ -45,8 +45,8 @@
 #define RECIEVE_DONE_RX2    !(DMA_TCD2_CSR & DMA_TCD_CSR_DONE)
 #define RECIEVE_DONE_RX3    !(DMA_TCD3_CSR & DMA_TCD_CSR_DONE)
 
-#define C5_DMA_ENABLE       UART_C5_TDMAS | UART_C5_RDMAS
-#define C5_DMA_DISABLE      0
+#define UART_DMA_ENABLE       UART_C5_TDMAS | UART_C5_RDMAS
+#define UART_DMA_DISABLE    0
 #define IRQ_PRIORITY        64  // 0 = highest priority, 255 = lowest
 
 #define likely(x)	__builtin_expect(!!(x), 1)
@@ -115,7 +115,6 @@ void dma_ch0_isr() {
     SerialEvent::txTail = SerialEvent::txTail < (TX_FIFO_SIZE - 1) ? SerialEvent::txTail + 1 : 0;
     // user or default tx callback event
     sent->txEventHandler();
-    //SerialEvent::TX_CALLBACK();
     /***********************************************************************************
      / here if the fifo has packets to send, we setup the dma destination address       /
      / and source registers for transmission on the queued serial port. We will         /
@@ -125,11 +124,9 @@ void dma_ch0_isr() {
     if ( SerialEvent::txCount > 0 ) {
         tx_fifo_t* queued = &txfifo[SerialEvent::txTail];
         if (queued->port == 1) {
-            BITBAND_U8(UART0_C2, 7) = 0x01;
-            //UART0_C2 |= UART_C2_TIE;
+            //BITBAND_U8(UART0_C2, 7) = 0x01;
+            UART0_C2 |= UART_C2_TIE;
             DMA_TCD0_DADDR = &UART0_D;
-            // Number of bytes to transfer (in each service request)
-            // DMA_TCD0_NBYTES_MLNO = queued->size;
             DMAMUX0_CHCFG0 &= ~0x3F;
             DMAMUX0_CHCFG0 |= DMAMUX_SOURCE_UART0_TX;
         } else if (queued->port == 2) {
@@ -143,11 +140,11 @@ void dma_ch0_isr() {
             DMAMUX0_CHCFG0 &= ~0x3F;
             DMAMUX0_CHCFG0 |= DMAMUX_SOURCE_UART2_TX;
         }
+        // Number of bytes to transfer (in each service request)
         DMA_TCD0_CITER_ELINKNO = queued->size;
         DMA_TCD0_BITER_ELINKNO = queued->size;
         DMA_TCD0_SADDR = queued->packet;
         BITBAND_U32(DMA_ERQ, 0x00) = 0x01;
-        //DMA_ERQ |= DMA_ERQ_ERQ0;
         return;
         
     } else {
@@ -245,6 +242,25 @@ SerialEvent::SerialEvent() :
     dma_ch_enabled[2] = false;
     dma_ch_enabled[3] = false;
 }
+// user defined TX memory
+SerialEvent::SerialEvent(uint32_t memmory) :
+txEventHandler(defaultCallback),
+rxEventHandler(defaultCallback),
+rxBuffer(defaultBuffer_RX),
+rxBufferSize(2),
+loopBack(false),
+termCharacter(0)
+{
+    txHead = 0;
+    txTail = 0;
+    txCount = 0;
+    _memory = memmory;
+    txDone = true;
+    dma_ch_enabled[0] = false;
+    dma_ch_enabled[1] = false;
+    dma_ch_enabled[2] = false;
+    dma_ch_enabled[3] = false;
+}
 // ----------------------------------------------begin---------------------------------------------------------------
 void SerialEvent::begin( uint32_t baud, uint32_t format) {
     // Enable DMA, DMAMUX clocks
@@ -261,6 +277,8 @@ void SerialEvent::begin( uint32_t baud, uint32_t format) {
     }
     if (port == &Serial1) {
         Serial1.begin(baud, format);
+        // disable Serial1 ISR
+        NVIC_DISABLE_IRQ(IRQ_UART0_STATUS);
         if (loopBack) {
             // Set internal Loopback
             UART0_C1 |= UART_C1_LOOPS;
@@ -271,40 +289,38 @@ void SerialEvent::begin( uint32_t baud, uint32_t format) {
         UART0_RWFIFO = 1;
         //UART0_C2 |= UART_C2_RIE;
         // enable Serial1 tx dma 
-        UART0_C5 = C5_DMA_ENABLE;
+        UART0_C5 = UART_DMA_ENABLE;
         current_port = SERIAL1;
         dma_RX_begin();
         dma_ch_enabled[SERIAL1] = true;
-        // disable Serial1 ISR
-        NVIC_DISABLE_IRQ(IRQ_UART0_STATUS);
     }
     else if (port == &Serial2) {
         Serial2.begin(baud, format);
+        // disable Serial2 ISR
+        NVIC_DISABLE_IRQ(IRQ_UART1_STATUS);
         if (loopBack) {
             // Set internal Loopback
             UART1_C1 |= UART_C1_LOOPS;
         }
         // enable Serial2 tx DMA
-        UART1_C5 = C5_DMA_ENABLE;
+        UART1_C5 = UART_DMA_ENABLE;
         current_port = SERIAL2;
         dma_RX_begin();
         dma_ch_enabled[SERIAL2] = true;
-        // disable Serial2 ISR
-        NVIC_DISABLE_IRQ(IRQ_UART1_STATUS);
     }
     else if (port == &Serial3) {
         Serial3.begin(baud, format);
+        // disable Serial3 ISR
+        NVIC_DISABLE_IRQ(IRQ_UART2_STATUS);
         if (loopBack) {
             // Set internal Loopback
             UART2_C1 |= UART_C1_LOOPS;
         }
         // enable Serial3 tx DMA
-        UART2_C5 = C5_DMA_ENABLE;
+        UART2_C5 = UART_DMA_ENABLE;
         current_port = SERIAL3;
         dma_RX_begin();
         dma_ch_enabled[SERIAL3] = true;
-        // disable Serial3 ISR
-        NVIC_DISABLE_IRQ(IRQ_UART2_STATUS);
     }
 }
 // --------------------------------------------serialTXInit----------------------------------------------------------
@@ -364,7 +380,7 @@ int SerialEvent::dma_RX_begin(void) {
             bufSize_rx1 = rxBufferSize;
             zeroptr_rx1 = (uintptr_t*)DMA_TCD1_DADDR;
             currentptr_rx1 = zeroptr_rx1;
-            Serial.printf("DMA_TCD1_DLASTSGA: %i\t| DMA_TCD1_DADDR: %p | zeroptr_rx1: %p\n\n",  DMA_TCD1_DLASTSGA, DMA_TCD1_DADDR, zeroptr_rx1);
+            //Serial.printf("DMA_TCD1_DLASTSGA: %i\t| DMA_TCD1_DADDR: %p | zeroptr_rx1: %p\n\n",  DMA_TCD1_DLASTSGA, DMA_TCD1_DADDR, zeroptr_rx1);
         }
         // Source and destination size 8 bit
         DMA_TCD1_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
@@ -485,55 +501,58 @@ int SerialEvent::dma_RX_begin(void) {
 }
 // -----------------------------------------------end----------------------------------------------------------------
 int SerialEvent::dma_end( void ) {
-     if (!(SIM_SCGC7 & SIM_SCGC7_DMA)) return -1;
-     if (!(SIM_SCGC6 & SIM_SCGC6_DMAMUX)) return -1;
-     // make sure all queued packets all transmeitted and nothing
-     // is being read into each rx port.
-     while ( SerialEvent::txCount > 0 ) yield();
-     while (SEND_DONE_TX) yield();
-     while (RECIEVE_DONE_RX1) yield();
-     while (RECIEVE_DONE_RX2) yield();
-     while (RECIEVE_DONE_RX3) yield();
-     delay(20);
-     if (this->current_port == SERIAL1) {
-         NVIC_DISABLE_IRQ(IRQ_DMA_CH1);
-        //Serial.println("Serial1");
-         Serial1.end();
-         // clear Serial1 dma enable rx/tx bits
-         UART0_C5 = C5_DMA_DISABLE;
-         dma_ch_enabled[SERIAL1] = false;
-     }
-     else if (this->current_port == SERIAL2) {
-         NVIC_DISABLE_IRQ(IRQ_DMA_CH2);
-         //Serial.println("Serial2");
-         Serial2.end();
-         // clear Serial2 dma enable rx/tx bits
-         UART1_C5 = C5_DMA_DISABLE;
-         dma_ch_enabled[SERIAL2] = false;
-     }
-     else if (this->current_port == SERIAL3) {
-         NVIC_DISABLE_IRQ(IRQ_DMA_CH2);
-         //Serial.println("Serial3");
-         Serial3.end();
-         // clear Serial3 dma enable rx/tx bits
-         UART2_C5 = C5_DMA_DISABLE;
-         dma_ch_enabled[SERIAL3] = false;
-     }
-     else {
-         return -1;
-     }
-     bool  allDone = ( !( dma_ch_enabled[1]) && !(dma_ch_enabled[2]) && !(dma_ch_enabled[3]) );
-     if (allDone) {
-         NVIC_DISABLE_IRQ(IRQ_DMA_CH0);
-         NVIC_DISABLE_IRQ(IRQ_DMA_CH1);
-         NVIC_DISABLE_IRQ(IRQ_DMA_CH2);
-         NVIC_DISABLE_IRQ(IRQ_DMA_CH3);
-         txHead = 0;
-         txTail = 0;
-         txCount = 0;
-     }
-     return this->current_port;
- }
+    if (!(SIM_SCGC7 & SIM_SCGC7_DMA)) return -1;
+    if (!(SIM_SCGC6 & SIM_SCGC6_DMAMUX)) return -1;
+    // make sure all queued packets all transmeitted and nothing
+    // is being read into each rx port.
+    while ( SerialEvent::txCount > 0 ) yield();
+    while (SEND_DONE_TX) yield();
+    if (dma_ch_enabled[SERIAL1]) {
+        while (RECIEVE_DONE_RX1) yield();
+    }
+    if (dma_ch_enabled[SERIAL2]) {
+        while (RECIEVE_DONE_RX2) yield();
+    }
+    if (dma_ch_enabled[SERIAL3]) {
+        while (RECIEVE_DONE_RX3) yield();
+    }
+    if (this->current_port == SERIAL1) {
+        NVIC_DISABLE_IRQ(IRQ_DMA_CH1);
+        Serial1.end();
+        // clear Serial1 dma enable rx/tx bits
+        UART0_C5 = UART_DMA_DISABLE;
+        dma_ch_enabled[SERIAL1] = false;
+    }
+    else if (this->current_port == SERIAL2) {
+        NVIC_DISABLE_IRQ(IRQ_DMA_CH2);
+        Serial2.end();
+        // clear Serial2 dma enable rx/tx bits
+        UART1_C5 = UART_DMA_DISABLE;
+        dma_ch_enabled[SERIAL2] = false;
+    }
+    else if (this->current_port == SERIAL3) {
+        NVIC_DISABLE_IRQ(IRQ_DMA_CH2);
+        Serial3.end();
+        // clear Serial3 dma enable rx/tx bits
+        UART2_C5 = UART_DMA_DISABLE;
+        dma_ch_enabled[SERIAL3] = false;
+    }
+    else {
+        return -1;
+    }
+    bool  allDone = ( !( dma_ch_enabled[1]) && !(dma_ch_enabled[2]) && !(dma_ch_enabled[3]) );
+    if (allDone) {
+        NVIC_DISABLE_IRQ(IRQ_DMA_CH0);
+        NVIC_DISABLE_IRQ(IRQ_DMA_CH1);
+        NVIC_DISABLE_IRQ(IRQ_DMA_CH2);
+        NVIC_DISABLE_IRQ(IRQ_DMA_CH3);
+        txHead = 0;
+        txTail = 0;
+        txCount = 0;
+    }
+    Serial.println();
+    return this->current_port;
+}
  // --------------------------------------------available------------------------------------------------------------
 int SerialEvent::dma_available(void) {
     if ( this->current_port == SERIAL1 ) {
@@ -647,25 +666,28 @@ int SerialEvent::dma_flush( void ) {
 }
 // -----------------------------------------------clear--------------------------------------------------------------
 int SerialEvent::dma_clear( void ) {
-    DMA_CR |= DMA_CR_CX;
+    //DMA_CR |= DMA_CR_HALT;
     int fifoSize = TX_FIFO_SIZE;
     int i = 0;
+    txCount = 0;
+    while (SEND_DONE_TX) yield();
     while (--fifoSize) {
         tx_fifo_t* queued = &txfifo[i];
         if (queued->allocated) {
             // update memory var, since we are releasing it here
-            SerialEvent::_memory += queued->size;
+            _memory += queued->size;
             // free memory of already transmitted packet
             delete [] queued->packet;
             queued->allocated = false;
         }
+        i++;
     }
-    txTail = txHead;
-    SerialEvent::txCount--;
+    txTail = txHead = 0;
+    //DMA_CR &= ~DMA_CR_HALT;
     return 1;
 }
 // -----------------------------------------------end----------------------------------------------------------------
-inline int SerialEvent::dma_write( char* data, uint32_t size )  {
+inline int SerialEvent::dma_write( const uint8_t* data, uint32_t size )  {
     if (unlikely(!(SIM_SCGC7 & SIM_SCGC7_DMA))) return -1;
     if (unlikely(!(SIM_SCGC6 & SIM_SCGC6_DMAMUX))) return -1;
     //-----------------------------------------------------------------
@@ -673,7 +695,6 @@ inline int SerialEvent::dma_write( char* data, uint32_t size )  {
     int mem = _memory;
     mem -= size;
     if (txCount >= (TX_FIFO_SIZE) || (mem <= 0) ) { return -1; }
-    //if (mem >= 1 && txCount < TX_FIFO_SIZE) { _memory = mem; }
     _memory = mem;
     //-----------------------------------------------------------------
     // here we insert new items into the fifo circular buffer

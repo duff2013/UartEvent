@@ -19,7 +19,7 @@ SerialEvent Event1 = SerialEvent();
  * for every byte received. If you set the buffer to
  * more than 1 it will fire every buffer size bytes.
  *******************************************************/
-char rx1Buffer[1];
+volatile char rx1Buffer[1];
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);

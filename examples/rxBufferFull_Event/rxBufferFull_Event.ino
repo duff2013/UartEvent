@@ -13,7 +13,7 @@
 
 SerialEvent Event1 = SerialEvent();
 
-char rx1Buffer[8];// RX buffer set to eight bytes
+volatile char rx1Buffer[8];// RX buffer set to eight bytes
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);

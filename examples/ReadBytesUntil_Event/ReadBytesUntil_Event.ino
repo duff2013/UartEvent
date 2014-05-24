@@ -17,7 +17,7 @@ SerialEvent Event1 = SerialEvent();
  * Set the RX buffer large enough to hold incoming
  * termination data or the buffer full event will fire.
  *****************************************************/
-char rx1Buffer[128];
+volatile char rx1Buffer[128];
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);

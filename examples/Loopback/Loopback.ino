@@ -21,7 +21,7 @@
 
 SerialEvent Event1 = SerialEvent();
 
-char rx1Buffer[128]; // RX Event will fire when buffer is full (128 bytes)
+volatile char rx1Buffer[128]; // RX Event will fire when buffer is full (128 bytes)
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);

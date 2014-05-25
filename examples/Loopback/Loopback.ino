@@ -62,6 +62,6 @@ void tx1Event(void) {
 
 void rx1Event(void) {
     // RX Event function prints the buffer when it is full
-    Serial.print(rx1Buffer);
+    Serial.printf("%s", rx1Buffer);
     
 }

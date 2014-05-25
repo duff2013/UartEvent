@@ -107,8 +107,6 @@ void dma_ch0_isr() {
     }
     else {
         Serial.println("ERROR: FREE ALLOCATED FAILED");
-        // increment fifo tail
-        SerialEvent::txTail = SerialEvent::txTail < (TX_FIFO_SIZE - 1) ? SerialEvent::txTail + 1 : 0;
         return;
     }
     // increment fifo tail
@@ -161,7 +159,7 @@ void dma_ch1_isr() {
     BITBAND_U32(DMA_ERQ, 1) = 0x01;
     //DMA_ERQ |= DMA_ERQ_ERQ1;
     if (SerialEvent::term_rx1 != 0) {
-        static uint16_t byteCount_rx1 = 0;
+        static uint32_t byteCount_rx1 = 0;
         if (( (uint8_t)*SerialEvent::currentptr_rx1 == SerialEvent::term_rx1) || ( byteCount_rx1 == (SerialEvent::bufSize_rx1-1) )) {
             SerialEvent::currentptr_rx1 = (uintptr_t*)DMA_TCD1_DADDR;
             DMA_TCD1_DADDR = SerialEvent::zeroptr_rx1;
@@ -184,7 +182,7 @@ void dma_ch2_isr() {
     // Enable DMA Request 2
     BITBAND_U32(DMA_ERQ, 2) = 0x01;
     if (SerialEvent::term_rx2 != 0) {
-        static uint16_t byteCount_rx2 = 0;
+        static uint32_t byteCount_rx2 = 0;
         if (( (uint8_t)*SerialEvent::currentptr_rx2 == SerialEvent::term_rx2) || ( byteCount_rx2 == (SerialEvent::bufSize_rx2-1) )) {
             SerialEvent::currentptr_rx2 = (uintptr_t*)DMA_TCD2_DADDR;
             DMA_TCD2_DADDR = SerialEvent::zeroptr_rx2;
@@ -207,7 +205,7 @@ void dma_ch3_isr() {
     // Enable DMA Request 3
     BITBAND_U32(DMA_ERQ, 3) = 0x01;
     if (SerialEvent::term_rx3 != 0) {
-        static uint16_t byteCount_rx3 = 0;
+        static uint32_t byteCount_rx3 = 0;
         if (( (uint8_t)*SerialEvent::currentptr_rx3 == SerialEvent::term_rx3) || ( byteCount_rx3 == (SerialEvent::bufSize_rx3-1) )) {
             SerialEvent::currentptr_rx3 = (uintptr_t*)DMA_TCD3_DADDR;
             DMA_TCD3_DADDR = SerialEvent::zeroptr_rx3;
@@ -691,6 +689,7 @@ inline int SerialEvent::dma_write( const uint8_t* data, uint32_t size )  {
     if (unlikely(!(SIM_SCGC7 & SIM_SCGC7_DMA))) return -1;
     if (unlikely(!(SIM_SCGC6 & SIM_SCGC6_DMAMUX))) return -1;
     //-----------------------------------------------------------------
+    //Serial.printf("txCount: %02i | memory: %04i | txHead: %02i | txTail: %02i\n", txCount, _memory, txHead, txTail);
     // if fifo counter is >= than fifo size, do not add more serial packets to buffer;
     int mem = _memory;
     mem -= size;
@@ -718,7 +717,7 @@ inline int SerialEvent::dma_write( const uint8_t* data, uint32_t size )  {
         memcpy(p->packet, data, size);
     }
     // packet count
-    txCount++;
+    ++txCount;
     // fifo head
     txHead = txHead < (TX_FIFO_SIZE - 1) ? txHead + 1 : 0;
     //------------------------------------------------------------------
@@ -727,8 +726,8 @@ inline int SerialEvent::dma_write( const uint8_t* data, uint32_t size )  {
     //------------------------------------------------------------------
     if ( this->current_port == SERIAL1 ) {
         // DMA transfer requests enabled
-        BITBAND_U8(UART0_C2, 7) = 0x01;
-        //UART0_C2 |= UART_C2_TIE;
+        //BITBAND_U8(UART0_C2, 7) = 0x01;
+        UART0_C2 |= UART_C2_TIE;
         // Destination address
         DMA_TCD0_DADDR = &UART0_D;
         DMAMUX0_CHCFG0 &= ~0x3F;
@@ -736,8 +735,8 @@ inline int SerialEvent::dma_write( const uint8_t* data, uint32_t size )  {
     }
     else if ( this->current_port == SERIAL2 ) {
         // DMA transfer requests enabled
-        BITBAND_U8(UART1_C2, 7) = 0x01;
-        //UART1_C2 |= UART_C2_TIE;
+        //BITBAND_U8(UART1_C2, 7) = 0x01;
+        UART1_C2 |= UART_C2_TIE;
         // Destination address
         DMA_TCD0_DADDR = &UART1_D;
         // Set UART as source (CH 0)
@@ -746,8 +745,8 @@ inline int SerialEvent::dma_write( const uint8_t* data, uint32_t size )  {
     }
     else if ( this->current_port == SERIAL3 ) {
         // DMA transfer requests enabled
-        BITBAND_U8(UART2_C2, 7) = 0x01;
-        //UART2_C2 |= UART_C2_TIE;
+        //BITBAND_U8(UART2_C2, 7) = 0x01;
+        UART2_C2 |= UART_C2_TIE;
         // Destination address
         DMA_TCD0_DADDR = &UART2_D;
         // Set UART as source (CH 0)

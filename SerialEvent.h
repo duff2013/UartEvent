@@ -92,9 +92,9 @@ private:
     static volatile uint8_t term_rx2;
     static volatile uint8_t term_rx3;
     
-    static volatile uintptr_t *currentptr_rx1;
-    static volatile uintptr_t *currentptr_rx2;
-    static volatile uintptr_t *currentptr_rx3;
+    static volatile uintptr_t* currentptr_rx1;
+    static volatile uintptr_t* currentptr_rx2;
+    static volatile uintptr_t* currentptr_rx3;
     
     static volatile uintptr_t *zeroptr_rx1;
     static volatile uintptr_t *zeroptr_rx2;

@@ -12,8 +12,8 @@ Events that are supported currently are:<br>
 
 <b>Memory:</b><br>
 > This library allows you to declare how much memory for transmitting and receiving data. Rx memory is just an array buffer while transmitting uses a fifo of buffers. Each TX fifo buffer is 128 bytes so when declaring TX memory the fifo size is: (TX MEMORY/128) + 1.<br><br>
-<b>Transmitting:</b><br>
 
+<b>Transmitting:</b><br>
 > While traditional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine, SerialEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the base class is "Stream" most of the normal print statements work as you would expect. A couple of caveats need to be expressed now.<br><br>
 This library uses a fifo buffers which are hard coded at 128 bytes each. The fifo size explained in the Memory section effects sending multiple print statments in a row. Since each print statement will take up a fifo if it less than 128 bytes and more if it is larger some prints might get lost because of the fifo size limitation. It is recommended to stuff as much data into one print statement as possible. The reason the library use this setup, it allows you to just copy the data to the fifo buffers and move on, not having to wait for each character to send. This makes it somewhat none blocking. The biggest overhead in sending is only just coping data to the fifo. <br><br>
 

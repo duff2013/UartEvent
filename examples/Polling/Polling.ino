@@ -2,22 +2,25 @@
  * This SerialEvent example shows the simple use of
  * polling to receive data using Serial1 port. While 
  * this example does not do anything special but use 
- * the traditional polling methods. Notice no user 
- * buffer is declared so a internal 2 byte buffer will 
- * be used instead.
+ * the traditional polling methods.
  *****************************************************/
 #include <SerialEvent.h>
 
-SerialEvent pollEvent = SerialEvent();
+Serial1Event pollEvent;
+
+#define TX_BUFFER_SIZE 64
+#define RX_BUFFER_SIZE 64
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
-/****************************************************
- * The following is the minmum that must be defined
- * for this SerialEvent library to work.
- ****************************************************/
-  // set port to Serial1, this must be called before "begin"
-  pollEvent.port = &Serial1;
+  /****************************************************
+   * The following is the minmum that must be defined
+   * for this SerialEvent library to work.
+   ****************************************************/
+  // Must declare TX buffer size in bytes, this must be as big as your largest packet
+  SERIAL1_MEMORY_TX(TX_BUFFER_SIZE);
+  // Must declare RX buffer size in bytes, will fire when buffer is full or term if declared
+  SERIAL1_MEMORY_RX(RX_BUFFER_SIZE);
   // start SerialEvent using Hardware Serial1
   pollEvent.begin(9600);
 }
@@ -29,4 +32,3 @@ void loop() {
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }
 }
-

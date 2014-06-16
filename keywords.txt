@@ -6,16 +6,23 @@
 # Datatypes (KEYWORD1)
 #######################################
 SerialEvent	KEYWORD1
+Serial1Event	KEYWORD1
+Serial2Event	KEYWORD1
+Serial3Event	KEYWORD1
+SERIAL1_MEMORY_TX   KEYWORD1
+SERIAL1_MEMORY_RX   KEYWORD1
+SERIAL2_MEMORY_TX   KEYWORD1
+SERIAL2_MEMORY_RX   KEYWORD1
+SERIAL3_MEMORY_TX   KEYWORD1
+SERIAL3_MEMORY_RX   KEYWORD1
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
 loopBack	KEYWORD2
-port	KEYWORD2
 txEventHandler	KEYWORD2
 rxEventHandler	KEYWORD2
 rxBuffer	KEYWORD2
-rxBufferSize	KEYWORD2
-termCharacter	KEYWORD2
+rxTermCharacter	KEYWORD2
 #######################################
 # Instances (KEYWORD2)
 #######################################

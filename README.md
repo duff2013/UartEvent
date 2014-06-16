@@ -3,6 +3,8 @@ SerialEvent
 
 <h3>Teensy 3.0/3.1 SerialEvent Library V2</h3>
 
+<h4>This library is only intended for Teensy 3.1 now since it has enough DMA channels for all 3 serial ports.</h4>
+
 SerialEvents use DMA for transferring and Receiving data in the "background" making a full-duplex serial communications more possible. By using the DMA to handle the serial i/o you can lesson the load on the Teensy while sending and receiving. This library intends to hand over more control to the user by using Events which give you more flexibility.
 Events that are supported currently are:<br>
 1.  Receive Buffer Full<br>

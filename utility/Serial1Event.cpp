@@ -58,7 +58,7 @@ void dma_ch4_isr() {
     // clear dma interrupt request 0
     DMA_CINT |= DMA_CINT_CINT(4);
     int tail  = Serial1Event::txTail;
-    Serial1Event::txFifoCount--;
+    --Serial1Event::txFifoCount;
     // increment fifo tail
     Serial1Event::txTail = Serial1Event::txTail < (Serial1Event::TX_FIFO_SIZE - 1) ? Serial1Event::txTail + 1 : 0;
     /***********************************************************************************
@@ -273,7 +273,7 @@ void Serial1Event::serial_dma_write(const void *buf, unsigned int count) {
     int totalPacks = fifoSlots + txFifoCount + 1;
     term_rx_character = rxTermCharacter;
     if ( totalPacks > TX_FIFO_SIZE ) return;
-    if ( fifoSlots != 0 ) {
+    //if ( fifoSlots != 0 ) {
         for (int i = 0; i < fifoSlots; i++) {
             // start inserting new items into the fifo circular buffer
             tx1_fifo_t* p = &tx_memory_pool[txHead];
@@ -306,7 +306,7 @@ void Serial1Event::serial_dma_write(const void *buf, unsigned int count) {
             ++txFifoCount;
             txHead = txHead < ( TX_FIFO_SIZE - 1 ) ? txHead + 1 : 0;
         }
-    }
+    /*}
     else {
         // start inserting new items into the fifo circular buffer
         tx1_fifo_t* p = &tx_memory_pool[txHead];
@@ -322,7 +322,7 @@ void Serial1Event::serial_dma_write(const void *buf, unsigned int count) {
         // packet count
         ++txFifoCount;
         txHead = txHead < ( TX_FIFO_SIZE - 1 ) ? txHead + 1 : 0;
-    }
+    }*/
     //------------------------------------------------------------------
     // return if packets are still in transmission
     if(!txDone) return;

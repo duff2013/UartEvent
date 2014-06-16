@@ -1,21 +1,14 @@
-#ifndef SerialEvent_h
-#define SerialEvent_h
-#ifdef __cplusplus
 /*
  ||
  || @file 		SerialEvent.h
- || @version 	1
+ || @version 	2
  || @author 	Colin Duffy
  || @contact 	cmduffy@engr.psu.edu
  ||
  || @description
- || | A simple DMA Hardware Serial class for transfering data in the background.
- || | This allows you to send data and move on very quickly. The DMA engine will
- || | complete the transfer without CPU intervention. Sending is buffered so once
- || | the first transfer is complete any messages in the buffer are automatically
- || | sent without user intervention. Recieving is buffered by user settings but
- || | defaults to a single byte.
- || |
+ || | A event based Hardware Serial class for transferring data in the 
+ || | background using DMA for use with the Teensy3.1 only. This library
+ || | borrorowed some code from the Teensyduino Core Library.
  || #
  ||
  || @license
@@ -36,32 +29,373 @@
  || #
  ||
  */
-#include "Arduino.h"
+#ifndef SerialEvent_h
+#define SerialEvent_h
+#ifdef __cplusplus
 
-const size_t TX_FIFO_SIZE = 32;
-typedef struct transmit_fifo_t {
+#include "Arduino.h"
+#include "utility/Utils.h"
+//---------------------------------------Serial1Event----------------------------------------
+class Serial1Event : public Stream {
 private:
-    typedef void (*EVENT)();
+    void serial_dma_begin(uint32_t divisor);
+    void serial_dma_format(uint32_t format);
+    void serial_dma_end(void);
+    void serial_dma_set_transmit_pin(uint8_t pin);
+    void serial_dma_putchar(uint32_t c);
+    void serial_dma_write(const void *buf, unsigned int count);
+    void serial_dma_flush(void);
+    int serial_dma_available(void);
+    int serial_dma_getchar(void);
+    int serial_dma_peek(void);
+    void serial_dma_clear(void);
+    void serial_dma_print(const char *p);
+    void serial_dma_phex(uint32_t n);
+    void serial_dma_phex16(uint32_t n);
+    void serial_dma_phex32(uint32_t n);
+    
+    static void defaultCallback() { yield(); }
+    
+    friend void dma_ch4_isr ( void );
+    friend void dma_ch5_isr ( void );
+    
+    typedef void (*ISR)();
+    static ISR RX_CALLBACK;
+    static ISR TX_CALLBACK;
+    
+    static volatile int txFifoCount;
+    static volatile int term_rx_character;
+    static volatile uint32_t txHead;
+    static volatile uint32_t txTail;
+    static volatile uint32_t rxHead;
+    static volatile uint32_t rxTail;
+    static volatile uint16_t bufSize_rx;
+    static volatile uintptr_t* currentptr_rx;
+    static volatile uintptr_t *zeroptr_rx;
+    static volatile uint8_t* transmit_pin;
+    static volatile uint8_t TX_FIFO_SIZE;
+    static volatile uint16_t RX_BUFFER_SIZE;
+    static volatile boolean txDone;
+    static tx1_fifo_t * tx_memory_pool;
+    
+    static char *term_rx_string;
 public:
-    char* volatile packet;
+    Serial1Event() :
+        txEventHandler(defaultCallback),
+        rxEventHandler(defaultCallback),
+        rxTermCharacter(-1),
+        loopBack(false),
+        half(false)
+    {
+        txFifoCount, txHead, txTail, rxHead, rxTail, bufSize_rx = 0;
+        txDone = true;
+    }
+    virtual void begin(uint32_t baud, uint32_t format) {
+        serial_dma_begin(BAUD2DIV(baud));
+        serial_dma_format(format);
+    }
+    virtual void begin(uint32_t baud)           { serial_dma_begin(BAUD2DIV(baud)); }
+	virtual void end(void)                      { serial_dma_end(); }
+	virtual void transmitterEnable(uint8_t pin) { serial_dma_set_transmit_pin(pin); }
+	virtual int available(void)                 { return serial_dma_available(); }
+	virtual int peek(void)                      { return serial_dma_peek(); }
+	virtual int read(void)                      { serial_dma_getchar(); }
+	virtual void flush(void)                    { serial_dma_flush(); }
+	virtual void clear(void)                    { serial_dma_clear(); }
+	virtual size_t write(uint8_t c)             { serial_dma_putchar(c); }
+	virtual size_t write(unsigned long n)       { return write((uint8_t)n); }
+	virtual size_t write(long n)                { return write((uint8_t)n); }
+	virtual size_t write(unsigned int n)        { return write((uint8_t)n); }
+	virtual size_t write(int n)                 { return write((uint8_t)n); }
+    virtual size_t write9bit(uint32_t c)        {  }
+    
+	virtual size_t write(const uint8_t *buffer, size_t size) {
+        serial_dma_write(buffer, size);
+        return size;
+    }
+    virtual size_t write(const char *str) {
+        size_t len = strlen(str);
+        serial_dma_write((const uint8_t *)str, len);
+        return len;
+    }
+    static void initialize_tx_memory(tx1_fifo_t *data, uint16_t num) {
+        TX_FIFO_SIZE = num;
+        txUsedMemory = 0;
+        tx_memory_pool = data;
+        for (int i = 0; i < num; i++) {
+            tx1_fifo_t* p = &tx_memory_pool[i];
+            p->size = 0;
+            p->eventTrigger = false;
+            for (int x = 0; x < TX1_PACKET_SIZE; x++) p->packet[x] = 0;
+        }
+    }
+    static void initialize_rx_memory(uint8_t *data, uint16_t num) {
+        RX_BUFFER_SIZE = num;
+        rxUsedMemory = 0;
+        rxBuffer = data;
+        for (int i = 0; i < num+1; i++) rxBuffer[i] = 0;
+    }
+    ISR txEventHandler;
+    ISR rxEventHandler;
+    int rxTermCharacter;
+    char *rxTermString;
+    bool loopBack;
+    bool half;
+    static volatile uint8_t* rxBuffer;
+    static volatile uint8_t txUsedMemory;
+    static volatile uint8_t rxUsedMemory;
+};
+
+//---------------------------------------Serial2Event----------------------------------------
+class Serial2Event : public Stream {
+private:
+    void serial_dma_begin(uint32_t divisor);
+    void serial_dma_format(uint32_t format);
+    void serial_dma_end(void);
+    void serial_dma_set_transmit_pin(uint8_t pin);
+    void serial_dma_putchar(uint32_t c);
+    void serial_dma_write(const void *buf, unsigned int count);
+    void serial_dma_flush(void);
+    int serial_dma_available(void);
+    int serial_dma_getchar(void);
+    int serial_dma_peek(void);
+    void serial_dma_clear(void);
+    void serial_dma_print(const char *p);
+    void serial_dma_phex(uint32_t n);
+    void serial_dma_phex16(uint32_t n);
+    void serial_dma_phex32(uint32_t n);
+    
+    static void defaultCallback() { yield(); }
+    
+    friend void dma_ch6_isr ( void );
+    friend void dma_ch7_isr ( void );
+    
+    typedef void (*ISR)();
+    static ISR RX_CALLBACK;
+    static ISR TX_CALLBACK;
+    
+    static volatile int txFifoCount;
+    static volatile int term_rx_character;
+    static volatile uint32_t txHead;
+    static volatile uint32_t txTail;
+    static volatile uint32_t rxHead;
+    static volatile uint32_t rxTail;
+    static volatile uint16_t bufSize_rx;
+    static volatile uintptr_t* currentptr_rx;
+    static volatile uintptr_t *zeroptr_rx;
+    static volatile uint8_t* transmit_pin;
+    static volatile uint8_t TX_FIFO_SIZE;
+    static volatile uint16_t RX_BUFFER_SIZE;
+    static volatile boolean txDone;
+    static tx2_fifo_t * tx_memory_pool;
+    
+    static char *term_rx_string;
+public:
+    Serial2Event() :
+    txEventHandler(defaultCallback),
+    rxEventHandler(defaultCallback),
+    rxTermCharacter(-1),
+    loopBack(false),
+    half(false)
+    {
+        txFifoCount, txHead, txTail, rxHead, rxTail, bufSize_rx = 0;
+        txDone = true;
+    }
+    virtual void begin(uint32_t baud, uint32_t format) {
+        serial_dma_begin(BAUD2DIV(baud));
+        serial_dma_format(format);
+    }
+    virtual void begin(uint32_t baud)           { serial_dma_begin(BAUD2DIV(baud)); }
+	virtual void end(void)                      { serial_dma_end(); }
+	virtual void transmitterEnable(uint8_t pin) { serial_dma_set_transmit_pin(pin); }
+	virtual int available(void)                 { return serial_dma_available(); }
+	virtual int peek(void)                      { return serial_dma_peek(); }
+	virtual int read(void)                      { serial_dma_getchar(); }
+	virtual void flush(void)                    { serial_dma_flush(); }
+	virtual void clear(void)                    { serial_dma_clear(); }
+	virtual size_t write(uint8_t c)             { serial_dma_putchar(c); }
+	virtual size_t write(unsigned long n)       { return write((uint8_t)n); }
+	virtual size_t write(long n)                { return write((uint8_t)n); }
+	virtual size_t write(unsigned int n)        { return write((uint8_t)n); }
+	virtual size_t write(int n)                 { return write((uint8_t)n); }
+    virtual size_t write9bit(uint32_t c)        {  }
+    
+	virtual size_t write(const uint8_t *buffer, size_t size) {
+        serial_dma_write(buffer, size);
+        return size;
+    }
+    virtual size_t write(const char *str) {
+        size_t len = strlen(str);
+        serial_dma_write((const uint8_t *)str, len);
+        return len;
+    }
+    static void initialize_tx_memory(tx2_fifo_t *data, uint16_t num) {
+        TX_FIFO_SIZE = num;
+        txUsedMemory = 0;
+        tx_memory_pool = data;
+        for (int i = 0; i < num; i++) {
+            tx2_fifo_t* p = &tx_memory_pool[i];
+            p->size = 0;
+            p->eventTrigger = false;
+            for (int x = 0; x < TX2_PACKET_SIZE; x++) p->packet[x] = 0;
+        }
+    }
+    static void initialize_rx_memory(uint8_t *data, uint16_t num) {
+        RX_BUFFER_SIZE = num;
+        rxUsedMemory = 0;
+        rxBuffer = data;
+        for (int i = 0; i < num+1; i++) rxBuffer[i] = 0;
+    }
+    ISR txEventHandler;
+    ISR rxEventHandler;
+    int rxTermCharacter;
+    char *rxTermString;
+    bool loopBack;
+    bool half;
+    static volatile uint8_t* rxBuffer;
+    static volatile uint8_t txUsedMemory;
+    static volatile uint8_t rxUsedMemory;
+};
+
+//---------------------------------------Serial3Event----------------------------------------
+class Serial3Event : public Stream {
+private:
+    void serial_dma_begin(uint32_t divisor);
+    void serial_dma_format(uint32_t format);
+    void serial_dma_end(void);
+    void serial_dma_set_transmit_pin(uint8_t pin);
+    void serial_dma_putchar(uint32_t c);
+    void serial_dma_write(const void *buf, unsigned int count);
+    void serial_dma_flush(void);
+    int serial_dma_available(void);
+    int serial_dma_getchar(void);
+    int serial_dma_peek(void);
+    void serial_dma_clear(void);
+    void serial_dma_print(const char *p);
+    void serial_dma_phex(uint32_t n);
+    void serial_dma_phex16(uint32_t n);
+    void serial_dma_phex32(uint32_t n);
+    
+    static void defaultCallback() { yield(); }
+    
+    friend void dma_ch8_isr ( void );
+    friend void dma_ch9_isr ( void );
+    
+    typedef void (*ISR)();
+    static ISR RX_CALLBACK;
+    static ISR TX_CALLBACK;
+    
+    static volatile int txFifoCount;
+    static volatile int term_rx_character;
+    static volatile uint32_t txHead;
+    static volatile uint32_t txTail;
+    static volatile uint32_t rxHead;
+    static volatile uint32_t rxTail;
+    static volatile uint16_t bufSize_rx;
+    static volatile uintptr_t* currentptr_rx;
+    static volatile uintptr_t *zeroptr_rx;
+    static volatile uint8_t* transmit_pin;
+    static volatile uint8_t TX_FIFO_SIZE;
+    static volatile uint16_t RX_BUFFER_SIZE;
+    static volatile boolean txDone;
+    static tx3_fifo_t * tx_memory_pool;
+    
+    static char *term_rx_string;
+public:
+    Serial3Event() :
+    txEventHandler(defaultCallback),
+    rxEventHandler(defaultCallback),
+    rxTermCharacter(-1),
+    loopBack(false),
+    half(false)
+    {
+        txFifoCount, txHead, txTail, rxHead, rxTail, bufSize_rx = 0;
+        txDone = true;
+    }
+    virtual void begin(uint32_t baud, uint32_t format) {
+        serial_dma_begin(BAUD2DIV3(baud));
+        serial_dma_format(format);
+    }
+    virtual void begin(uint32_t baud)           { serial_dma_begin(BAUD2DIV3(baud)); }
+	virtual void end(void)                      { serial_dma_end(); }
+	virtual void transmitterEnable(uint8_t pin) { serial_dma_set_transmit_pin(pin); }
+	virtual int available(void)                 { return serial_dma_available(); }
+	virtual int peek(void)                      { return serial_dma_peek(); }
+	virtual int read(void)                      { serial_dma_getchar(); }
+	virtual void flush(void)                    { serial_dma_flush(); }
+	virtual void clear(void)                    { serial_dma_clear(); }
+	virtual size_t write(uint8_t c)             { serial_dma_putchar(c); }
+	virtual size_t write(unsigned long n)       { return write((uint8_t)n); }
+	virtual size_t write(long n)                { return write((uint8_t)n); }
+	virtual size_t write(unsigned int n)        { return write((uint8_t)n); }
+	virtual size_t write(int n)                 { return write((uint8_t)n); }
+    virtual size_t write9bit(uint32_t c)        {  }
+    
+	virtual size_t write(const uint8_t *buffer, size_t size) {
+        serial_dma_write(buffer, size);
+        return size;
+    }
+    virtual size_t write(const char *str) {
+        size_t len = strlen(str);
+        serial_dma_write((const uint8_t *)str, len);
+        return len;
+    }
+    static void initialize_tx_memory(tx3_fifo_t *data, uint16_t num) {
+        TX_FIFO_SIZE = num;
+        txUsedMemory = 0;
+        tx_memory_pool = data;
+        for (int i = 0; i < num; i++) {
+            tx3_fifo_t* p = &tx_memory_pool[i];
+            p->size = 0;
+            p->eventTrigger = false;
+            for (int x = 0; x < TX3_PACKET_SIZE; x++) p->packet[x] = 0;
+        }
+    }
+    static void initialize_rx_memory(uint8_t *data, uint16_t num) {
+        RX_BUFFER_SIZE = num;
+        rxUsedMemory = 0;
+        rxBuffer = data;
+        for (int i = 0; i < num+1; i++) rxBuffer[i] = 0;
+    }
+    ISR txEventHandler;
+    ISR rxEventHandler;
+    int rxTermCharacter;
+    char *rxTermString;
+    bool loopBack;
+    bool half;
+    static volatile uint8_t* rxBuffer;
+    static volatile uint8_t txUsedMemory;
+    static volatile uint8_t rxUsedMemory;
+};
+//---------------------------------------------End----------------------------------------------
+/*class SerialEvent;
+#define TX_PACKET_SIZE 128
+typedef struct transmit_fifo_t {
+    uint8_t packet[TX_PACKET_SIZE];
     volatile uint16_t size;
-    volatile uint8_t port;
-    volatile bool allocated;
-    EVENT txEventHandler;
-    transmit_fifo_t() : allocated(false) {}
 } tx_fifo_t;
+
+typedef struct receive_fifo_t {
+    char *packet;
+} rx_fifo_t;
+
+#define EVENT_MEMORY_TX(num) ({                         \
+    const int fifoSize = num/TX_PACKET_SIZE + 1;        \
+    DMAMEM static tx_fifo_t data[fifoSize];             \
+    SerialEvent::initialize_tx_memory(data, fifoSize);  \
+})
+
+#define EVENT_MEMORY_RX(num) ({                         \
+    DMAMEM static uint8_t data[num+1];                  \
+    SerialEvent::initialize_rx_memory(data, num);       \
+})
 
 class SerialEvent : public Print {
 private:
-    friend void dma_ch0_isr ( void );
-    friend void dma_ch1_isr ( void );
-    friend void dma_ch2_isr ( void );
-    friend void dma_ch3_isr ( void );
+    friend void dma_ch4_isr ( void );
+    friend void dma_ch5_isr ( void );
     friend void callback    ( void );
-    
-    //void memcpy8(volatile char *dest, const char *src, unsigned int count);
-    static void defaultCallback() { yield(); }
-    
+
     int dma_TX_begin            ( void );
     int dma_RX_begin            ( void );
     int dma_write               ( const uint8_t* data, uint32_t size ) ;
@@ -72,46 +406,37 @@ private:
     int dma_flush               ( void );
     int dma_clear               ( void );
     size_t dma_readBytesUntil   ( char terminator, char *buffer, size_t length );
-    
+
     typedef void (*ISR)();
-    static ISR RX1_CALLBACK;
-    static ISR RX2_CALLBACK;
-    static ISR RX3_CALLBACK;
+    static ISR RX_CALLBACK;
+    static ISR TX_CALLBACK;
+    static void defaultCallback() { yield(); }
     
+    uint32_t txSkipped;
     static volatile bool txDone;
-    static volatile int txCount;
+    static volatile int txFifoCount;
     static volatile uint32_t txHead;
     static volatile uint32_t txTail;
-    static volatile uint32_t _memory;
     
-    static volatile uint16_t bufSize_rx1;
-    static volatile uint16_t bufSize_rx2;
-    static volatile uint16_t bufSize_rx3;
+    static volatile uint16_t bufSize_rx;
     
-    static volatile uint8_t term_rx1;
-    static volatile uint8_t term_rx2;
-    static volatile uint8_t term_rx3;
+    static volatile uint8_t term_rx;
     
-    static volatile uintptr_t* currentptr_rx1;
-    static volatile uintptr_t* currentptr_rx2;
-    static volatile uintptr_t* currentptr_rx3;
+    static volatile uintptr_t* currentptr_rx;
     
-    static volatile uintptr_t *zeroptr_rx1;
-    static volatile uintptr_t *zeroptr_rx2;
-    static volatile uintptr_t *zeroptr_rx3;
+    static volatile uintptr_t *zeroptr_rx;
     
     static bool dma_ch_enabled[4];
     
     volatile uint32_t rxHead;
     volatile uint32_t rxTail;
     
-    volatile char defaultBuffer_RX[2];
+    static tx_fifo_t * tx_memory_pool;
+    static uint8_t TX_FIFO_SIZE;
+    static uint16_t RX_BUFFER_SIZE;
     
-    uint8_t current_port;
-    enum { SERIAL1 = 1, SERIAL2 = 2, SERIAL3 = 3 };
 public:
     SerialEvent();
-    SerialEvent(uint32_t memmory);
     ~SerialEvent()          { dma_end(); }
     void begin              ( uint32_t baud, uint32_t format = SERIAL_8N1 );
     virtual void end        ( void ){ dma_end(); }
@@ -132,24 +457,37 @@ public:
         if (error == -1) return -1;
         return size;
     }
+    static void initialize_tx_memory(tx_fifo_t *data, uint8_t num) {
+        //Serial.printf("Num FIFO: %i\n", num);
+        TX_FIFO_SIZE = num;
+        tx_memory_pool = data;
+        for (int i = 0; i < num; i++) {
+            tx_fifo_t* p = &tx_memory_pool[i];
+            memset(p->packet, 0, TX_PACKET_SIZE);
+        }
+    }
+    static void initialize_rx_memory(uint8_t *data, uint16_t num) {
+        RX_BUFFER_SIZE = num;
+        rxBuffer = data;
+        memset(rxBuffer, 0, num);
+        rxBuffer[num] = 0;
+    }
     using Print::write;
-    // Serial Port
-    Stream *port;
     // Event Callback
     ISR txEventHandler;
     ISR rxEventHandler;
-    // User supplied RX buffer array
-    volatile char* rxBuffer;
+    // RX buffer array
+    static uint8_t* rxBuffer;
     // RX buffer size
     uint32_t rxBufferSize;
     // Return TX buffer size
-    uint32_t txBufferSize() const { return txCount; }
-    // return memory
-    uint32_t memory() const { return _memory; }
+    uint32_t txBufferSize() const { return txFifoCount; }
+    // return skipped transmits
+    uint32_t skipped() const { return txSkipped; }
     // set serial loopback (y/n)?
     bool loopBack;
     // termination charatcter for readBytesUntil
     uint8_t termCharacter;
-};
+};*/
 #endif  // __cplusplus
 #endif

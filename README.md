@@ -11,7 +11,7 @@ Events that are supported currently are:<br>
 4.  Transmit Complete<br>
 
 <b>Transmitting:</b><br>
-> While traditional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine, SerialEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the base class is "Print" most of the normal print statements work as you would expect.<br><br>
+> While traditional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine, SerialEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the base class is "Stream" most of the normal print statements work as you would expect.<br><br>
 
 <b>Receiving:</b><br>
 > Users have more control over how they want to capture data using this library using events instead of polling methods. While you can use polling, registering events can be quite useful. The three events that are currently implemented are explained below:<br>
@@ -22,8 +22,8 @@ The DMA engine allows you to receive data which will signal an event handler tha
 <br>
 
 <b>Performance:</b><br>
->The performance is on par with the Hardware Serial Class in the Teensduino core but is a little slower in actual sending because of the DMA setup overhead. I'm working on speeding this up. While the actual sending of the data is slower the process of sending data is much faster in that it only takes microseconds to get through the print statement no matter what baud rate. Sending a 4000 byte packet takes about ~1200 microseconds compared to ~82000 microseconds with the normal Uart print method at 115200. This is because the FIFO is a packet based buffer instead of a byte based. Multiple packets can be stored with 5520 bytes total maximum currently.<br>
+>The performance is on par with the Hardware Serial Class in the Teensduino core but is a little slower in actual sending because of the DMA setup overhead. I'm working on speeding this up. While the actual sending of the data is slower the process of sending data is much faster in that it only takes microseconds to get through the print statement no matter what baud rate. Sending a 4000 byte packet takes about ~1200 microseconds compared to ~82000 microseconds with the normal Uart print method at 115200. This is because the FIFO is a packet based buffer instead of a byte based.<br>
 </ul>
 
 <b>Usage:</b><br>
->Since your event functions are called from interrupts make sure you declare any variables used in the event handler as volatile! Also make sure any code inside a event is fast as possible since it is called from the DMA ISR. 
+>Since your event functions are called from interrupts make sure you declare any variables used in the event handler as volatile! Also make sure any code inside a event is fast as possible since it is called from the DMA ISR.

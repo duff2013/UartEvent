@@ -8,7 +8,8 @@
  || @description
  || | A event based Hardware Serial class for transferring data in the 
  || | background using DMA for use with the Teensy3.1 only. This library
- || | borrorowed some code from the Teensyduino Core Library.
+ || | borrorowed some code from the Teensyduino Core Library, Copyright
+ || | (c) 2013 PJRC.COM, LLC.
  || #
  ||
  || @license

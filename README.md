@@ -12,7 +12,6 @@ Events that are supported currently are:<br>
 
 <b>Transmitting:</b><br>
 > While traditional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine, SerialEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the base class is "Print" most of the normal print statements work as you would expect.<br><br>
-Care must be taken because currently the library uses dynamic memory to send data. While small data transfers are safe for the most part large data transfers can use up considerable ram, up to 5520 bytes, so budgeting your memory is critical.<br>
 
 <b>Receiving:</b><br>
 > Users have more control over how they want to capture data using this library using events instead of polling methods. While you can use polling, registering events can be quite useful. The three events that are currently implemented are explained below:<br>
@@ -27,4 +26,4 @@ The DMA engine allows you to receive data which will signal an event handler tha
 </ul>
 
 <b>Usage:</b><br>
->Since your event functions are called from interrupts make sure you declare any variables used in the event handler as volatile!
+>Since your event functions are called from interrupts make sure you declare any variables used in the event handler as volatile! Also make sure any code inside a event is fast as possible since it is called from the DMA ISR. 

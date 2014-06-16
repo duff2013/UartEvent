@@ -1,7 +1,7 @@
 SerialEvent
 =========
 
-<h3>Teensy 3.0/3.1 SerialEvent Library V2</h3>
+<h3>Teensy 3.1 SerialEvent Library V2</h3>
 
 <h4>This library is only intended for Teensy 3.1 now since it has enough DMA channels for all 3 serial ports.</h4>
 

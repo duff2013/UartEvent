@@ -21,7 +21,7 @@
  || | Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  || #
  ||
-*/
+ */
 
 #include "SerialEvent.h"
 
@@ -233,10 +233,10 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
         head = over;
     }
     else {
-       __disable_irq();
-       memcpy_fast(txBuffer+head, buf, count);
-       head += count;
-       __enable_irq();
+        __disable_irq();
+        memcpy_fast(txBuffer+head, buf, count);
+        head += count;
+        __enable_irq();
     }
     event.txHead = head;
     if (!event.isTransmitting) {
@@ -247,7 +247,6 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
         sendSize -= count;
         event.isTransmitting = true;
         __enable_irq();
-        Serial.println();
     }
 }
 

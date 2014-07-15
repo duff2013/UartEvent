@@ -33,7 +33,6 @@
 
 #define BITBAND_ADDR(reg, bit) (((uint32_t)&(reg) - 0x40000000) * 32 + (bit) * 4 + 0x42000000)
 #define BITBAND_U32(reg, bit) (*(uint32_t *)BITBAND_ADDR((reg), (bit)))
-#define BITBAND_U8(reg, bit) (*(uint8_t *)BITBAND_ADDR((reg), (bit)))
 
 #define UART_DMA_ENABLE     UART_C5_TDMAS | UART_C5_RDMAS
 #define UART_DMA_DISABLE    0
@@ -42,69 +41,58 @@
 #define UART_C5_TDMAS       (uint8_t)0x80
 #define UART_C5_RDMAS       (uint8_t)0x20
 
-#define C2_ENABLE           UART_C2_TE | UART_C2_RE | UART_C2_RIE | UART_C2_ILIE
+#define C2_ENABLE           UART_C2_TE | UART_C2_RE | UART_C2_RIE | UART_C2_ILIE | UART_C2_TIE
 #define C2_TX_ACTIVE		C2_ENABLE | UART_C2_TIE
 #define C2_TX_COMPLETING	C2_ENABLE | UART_C2_TCIE
 #define C2_TX_INACTIVE		C2_ENABLE
 
-#define SCGC7_DMA_BIT       1
-#define SCGC6_DMAMUX_BIT    1
-
 #define likely(x)           __builtin_expect(!!(x), 1)
 #define unlikely(x)         __builtin_expect(!!(x), 0)
 
-#define TX1_PACKET_SIZE 128
-typedef struct transmit1_fifo_t {
-    volatile uint8_t packet[TX1_PACKET_SIZE];
-    volatile uint16_t size;
-    volatile boolean eventTrigger;
-} tx1_fifo_t;
+typedef struct __attribute__((packed)) {
+    volatile int term_rx_character;
+    volatile char *term_rx_string;
+    volatile uint32_t txHead;
+    volatile uint32_t txTail;
+    volatile uint32_t rxHead;
+    volatile uint32_t rxTail;
+    volatile uintptr_t* currentptr_rx;
+    volatile uintptr_t* zeroptr_rx;
+    volatile uint8_t* transmit_pin;
+    volatile uint16_t TX_BUFFER_SIZE;
+    volatile uint16_t RX_BUFFER_SIZE;
+    volatile boolean isTransmitting;
+} event_params_t;
 
-#define TX2_PACKET_SIZE 128
-typedef struct transmit2_fifo_t {
-    uint8_t packet[TX2_PACKET_SIZE];
-    volatile uint16_t size;
-    volatile boolean eventTrigger;
-} tx2_fifo_t;
-
-#define TX3_PACKET_SIZE 128
-typedef struct transmit3_fifo_t {
-    uint8_t packet[TX3_PACKET_SIZE];
-    volatile uint16_t size;
-    volatile boolean eventTrigger;
-} tx3_fifo_t;
-
-#define SERIAL1_MEMORY_TX(num) ({                            \
-    const int fifoSize = num/TX1_PACKET_SIZE + 1;            \
-    DMAMEM static tx1_fifo_t data[fifoSize];                 \
-    Serial1Event::initialize_tx_memory(data, fifoSize);      \
+// ------------------------------Serial1---------------------------------
+#define SERIAL1_MEMORY_TX(num) ({                                        \
+    DMAMEM static uint8_t __attribute__((aligned(num))) buffer_tx1[num]; \
+    Serial1Event::initialize_tx_memory(buffer_tx1, num);                 \
 })
 
-#define SERIAL1_MEMORY_RX(num) ({                           \
-    DMAMEM static uint8_t data[num+1];                      \
-    Serial1Event::initialize_rx_memory(data, num);          \
+#define SERIAL1_MEMORY_RX(num) ({                                        \
+    DMAMEM static uint8_t buffer_rx1[num+1];                             \
+    Serial1Event::initialize_rx_memory(buffer_rx1, num);                 \
+})
+// ------------------------------Serial2---------------------------------
+#define SERIAL2_MEMORY_TX(num) ({                                        \
+    DMAMEM static uint8_t __attribute__((aligned(num))) buffer_tx2[num]; \
+    Serial2Event::initialize_tx_memory(buffer_tx2, num);                 \
 })
 
-#define SERIAL2_MEMORY_TX(num) ({                           \
-    const int fifoSize = num/TX2_PACKET_SIZE + 1;           \
-    DMAMEM static tx2_fifo_t data[fifoSize];                \
-    Serial2Event::initialize_tx_memory(data, fifoSize);     \
+#define SERIAL2_MEMORY_RX(num) ({                                        \
+    DMAMEM static uint8_t buffer_rx2[num+1];                             \
+    Serial2Event::initialize_rx_memory(buffer_rx2, num);                 \
+})
+// ------------------------------Serial3---------------------------------
+#define SERIAL3_MEMORY_TX(num) ({                                        \
+    DMAMEM static uint8_t __attribute__((aligned(num))) buffer_tx3[num]; \
+    Serial1Event::initialize_tx_memory(buffer_tx2, num);                 \
 })
 
-#define SERIAL2_MEMORY_RX(num) ({                           \
-    DMAMEM static uint8_t data[num+1];                      \
-    Serial2Event::initialize_rx_memory(data, num);          \
-})
-
-#define SERIAL3_MEMORY_TX(num) ({                           \
-    const int fifoSize = num/TX3_PACKET_SIZE + 1;           \
-    DMAMEM static tx3_fifo_t data[fifoSize];                \
-    Serial3Event::initialize_tx_memory(data, fifoSize);     \
-})
-
-#define SERIAL3_MEMORY_RX(num) ({                           \
-    DMAMEM static uint8_t data[num+1];                      \
-    Serial3Event::initialize_rx_memory(data, num);          \
+#define SERIAL3_MEMORY_RX(num) ({                                        \
+    DMAMEM static uint8_t buffer_rx3[num+1];                             \
+    Serial3Event::initialize_rx_memory(buffer_rx3, num);                 \
 })
 
 #endif

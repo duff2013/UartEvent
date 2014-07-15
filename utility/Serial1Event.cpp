@@ -113,7 +113,6 @@ void Serial1Event::serial_dma_begin( uint32_t divisor ) {
     UART0_C2 = C2_TX_INACTIVE;
     UART0_C5 = UART_DMA_ENABLE; // setup Serial1 tx,rx to use dma
     if ( loopBack ) UART0_C1 |= UART_C1_LOOPS; // Set internal loop1Back
-    //NVIC_ENABLE_IRQ(IRQ_UART0_STATUS);
     /****************************************************************
      * DMA TX setup
      ****************************************************************/
@@ -123,10 +122,6 @@ void Serial1Event::serial_dma_begin( uint32_t divisor ) {
     tx.interruptAtCompletion();
     tx.disableOnCompletion();
     tx.triggerAtHardwareEvent(DMAMUX_SOURCE_UART0_TX);
-    // set TX priority
-    //NVIC_SET_PRIORITY(IRQ_DMA_CH4, IRQ_PRIORITY);
-    // enable irq
-    //NVIC_ENABLE_IRQ(IRQ_DMA_CH4);
     /****************************************************************
      * DMA RX setup
      ****************************************************************/

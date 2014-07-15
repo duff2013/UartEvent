@@ -122,6 +122,8 @@ void Serial1Event::serial_dma_begin( uint32_t divisor ) {
     tx.interruptAtCompletion();
     tx.disableOnCompletion();
     tx.triggerAtHardwareEvent(DMAMUX_SOURCE_UART0_TX);
+    int sync_address = (int)&txBuffer[0] - (int)tx.TCD->SADDR;
+    Serial.printf("SADDR: %p | txBuffer: %p | sync_address: %X\n\n", tx.TCD->SADDR, &txBuffer[0], sync_address);
     /****************************************************************
      * DMA RX setup
      ****************************************************************/
@@ -208,7 +210,13 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
     int tail = event.txTail;
     int next = head + count;
     sendSize += count;
-    if (sendSize > event.TX_BUFFER_SIZE || abs(head - tail) >= event.TX_BUFFER_SIZE) {
+    if (sendSize > event.TX_BUFFER_SIZE) {
+        if (event.isTransmitting) DMA_CR |= DMA_CR_ECX;
+        tx.TCD->CITER = 1;
+        tx.TCD->BITER = 1;
+        tx.TCD->SADDR = &txBuffer[0];
+        head = 1;
+        event.txHead = head;
         sendSize = 0;
         return;
     }
@@ -242,6 +250,7 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
         sendSize -= count;
         event.isTransmitting = true;
         __enable_irq();
+        //Serial.println();
     }
 }
 

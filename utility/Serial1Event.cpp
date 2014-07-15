@@ -1,7 +1,7 @@
 /*
  ||
  || @file 		Serial1Event.cpp
- || @version 	1
+ || @version 	4
  || @author 	Colin Duffy
  || @contact 	cmduffy@engr.psu.edu
  || @license
@@ -24,199 +24,141 @@
 */
 
 #include "SerialEvent.h"
-// -------------------------------------------Serial1------------------------------------------
-#define SEND_DONE_TX        !(DMA_TCD4_CSR & DMA_TCD_CSR_DONE)
-#define RECIEVE_DONE_RX     !(DMA_TCD5_CSR & DMA_TCD_CSR_DONE)
 
 #define SCGC4_UART0_BIT     10
 
-Serial1Event::ISR   Serial1Event::RX_CALLBACK;
-Serial1Event::ISR   Serial1Event::TX_CALLBACK;
+Serial1Event::ISR       Serial1Event::RX_CALLBACK;
+Serial1Event::ISR       Serial1Event::TX_CALLBACK;
 
-volatile int        Serial1Event::txFifoCount;
-volatile int        Serial1Event:: term_rx_character;
-volatile uint32_t   Serial1Event::txHead;
-volatile uint32_t   Serial1Event::txTail;
-volatile uint32_t   Serial1Event::rxHead;
-volatile uint32_t   Serial1Event::rxTail;
-volatile uint16_t   Serial1Event::bufSize_rx;
-volatile uint16_t   Serial1Event::RX_BUFFER_SIZE;
-volatile uint8_t   *Serial1Event::transmit_pin;
-volatile uint8_t    Serial1Event::TX_FIFO_SIZE;
-volatile uint8_t   *Serial1Event::rxBuffer;
-volatile boolean       Serial1Event::txDone;
-volatile uintptr_t *Serial1Event::currentptr_rx;
-volatile uintptr_t *Serial1Event::zeroptr_rx;
-tx1_fifo_t         *Serial1Event::tx_memory_pool;
+event_params_t          Serial1Event::event;
+DMAChannel              Serial1Event::tx;
+DMAChannel              Serial1Event::rx;
 
-char               *Serial1Event::term_rx_string;
-volatile uint8_t    Serial1Event::txUsedMemory;
-volatile uint8_t    Serial1Event::rxUsedMemory;
-// ------------Serial1 ISR----------------
-void dma_ch4_isr() {
-    //Serial.printf("ISR   | count: %02i | head: %02i | tail: %02i\n",Serial1Event::txFifoCount, Serial1Event::txHead, Serial1Event::txTail);
-    // clear dma interrupt request 0
-    DMA_CINT |= DMA_CINT_CINT(4);
-    int tail  = Serial1Event::txTail;
-    --Serial1Event::txFifoCount;
-    // increment fifo tail
-    Serial1Event::txTail = Serial1Event::txTail < (Serial1Event::TX_FIFO_SIZE - 1) ? Serial1Event::txTail + 1 : 0;
-    /***********************************************************************************
-     / here if the fifo has packets to send, we setup the dma destination address       /
-     / and source registers for transmission on the queued serial port. We will         /
-     / keep transmitting these queued packets in the "background" until the fifo        /
-     / is exhausted.                                                                    /
-     ***********************************************************************************/
-    if ( Serial1Event::txFifoCount > 0 ) {
-        tx1_fifo_t* queued = &Serial1Event::tx_memory_pool[Serial1Event::txTail];
-        // Number of bytes to transfer (in each service request)
-        DMA_TCD4_CITER_ELINKNO = queued->size;
-        DMA_TCD4_BITER_ELINKNO = queued->size;
-        DMA_TCD4_SADDR = queued->packet;
-        DMA_SERQ = 4;
+volatile uint8_t        Serial1Event::txUsedMemory;
+volatile uint8_t        Serial1Event::rxUsedMemory;
+volatile unsigned char  *Serial1Event::rxBuffer;
+volatile uint32_t       Serial1Event::rxBufferSize;
+
+volatile unsigned char  *Serial1Event::txBuffer;
+
+volatile int Serial1Event::sendSize;
+// -------------------------------------------ISR------------------------------------------
+void Serial1Event::serial_dma_tx_isr( void ) {
+    tx.clearInterrupt();
+    int head = event.txHead;
+    int tail = event.txTail;
+    int mysize = sendSize;
+    if (sendSize) {
+        __disable_irq();
+        event.isTransmitting = true;
+        tail += sendSize;
+        if (tail >= event.TX_BUFFER_SIZE) {
+            tail -= event.TX_BUFFER_SIZE;
+        }
+        tx.TCD->CITER = sendSize;
+        tx.TCD->BITER = sendSize;
+        sendSize = 0;
+        tx.enable();
+        __enable_irq();
     } else {
-        // no more packets to transmitt
-        Serial1Event::txDone = true;
+        __disable_irq();
+        tail = head;
+        event.isTransmitting = false;
+        __enable_irq();
+        TX_CALLBACK();
     }
-    tx1_fifo_t* sent = &Serial1Event::tx_memory_pool[tail];
-    // user or default tx callback event
-    if (sent->eventTrigger) Serial1Event::TX_CALLBACK();
+    event.txTail = tail;
+    UART0_C2 |= UART_C2_TIE;
 }
 
-void dma_ch5_isr() {
-    // Clear Interrupt Request 1
-    DMA_CINT |= DMA_CINT_CINT(5);
-    //BITBAND_U32(DMA_ERQ, 5) = 0x01;
-    //DMA_ERQ |= DMA_ERQ_ERQ1;
-    if (Serial1Event::term_rx_character != -1) {
-        //int len=sizeof(Serial1Event::termChar);
-        /*uint8_t *tmpterm = Serial1Event::term1_rx;
-        int inc = 0;
-        Serial.printf("size: %i\n ", termSize);
-        do {
-            //Serial.println((char)*tmpterm++);
-            if (*tmpterm++ == (uint8_t)*Serial1Event::currentptr_rx ) Serial.println("Hello2");
-        } while (--termSize) ;*/
-        static uint32_t byteCount_rx = 0;
-        Serial1Event::rxUsedMemory = (100*byteCount_rx)/Serial1Event::RX_BUFFER_SIZE;
-        //Serial.printf("rxUsedMemory: %i\n", Serial1Event::rxUsedMemory);
-        if (( (uint8_t)*Serial1Event::currentptr_rx == Serial1Event:: term_rx_character) || ( byteCount_rx == (Serial1Event::RX_BUFFER_SIZE-1) )) {
-            Serial1Event::currentptr_rx = (uintptr_t*)DMA_TCD5_DADDR;
-            *Serial1Event::currentptr_rx = 0;
-            DMA_TCD5_DADDR = Serial1Event::zeroptr_rx;
-            byteCount_rx = 0;
-            Serial1Event::RX_CALLBACK();
+void Serial1Event::serial_dma_rx_isr( void ) {
+    rx.clearInterrupt();
+    if ( event.term_rx_character != -1 ) {
+        static uint32_t byteCount_rx = 1;
+        rxBufferSize = byteCount_rx;
+        if (( (uint8_t)*event.currentptr_rx == event.term_rx_character) || ( byteCount_rx == event.RX_BUFFER_SIZE ) ) {
+            event.currentptr_rx = (uintptr_t*)rx.TCD->DADDR;
+            *event.currentptr_rx = 0;
+            rx.TCD->DADDR = event.zeroptr_rx;
+            byteCount_rx = 1;
+            RX_CALLBACK();
         }
         else { ++byteCount_rx; }
-        Serial1Event::currentptr_rx = (uintptr_t*)DMA_TCD5_DADDR;
+        event.currentptr_rx = (uintptr_t*)rx.TCD->DADDR;
     }
     else {
-        // user or default rx1 callback event
-        Serial1Event::RX_CALLBACK();
+        RX_CALLBACK();
     }
-    // Enable DMA Request 1
-    DMA_SERQ = 5;
+    
 }
-
-void Serial1Event::serial_dma_begin(uint32_t divisor) {
+// -------------------------------------------CODE------------------------------------------
+void Serial1Event::serial_dma_begin( uint32_t divisor ) {
     TX_CALLBACK = txEventHandler;
     RX_CALLBACK = rxEventHandler;
-    // Enable DMA, DMAMUX and UART0 clocks
-    BITBAND_U32(SIM_SCGC7, SCGC7_DMA_BIT)       = 0x01;
-    BITBAND_U32(SIM_SCGC6, SCGC6_DMAMUX_BIT)    = 0x01;
-    BITBAND_U32(SIM_SCGC4, SCGC4_UART0_BIT)     = 0x01;
+    // Enable UART0 clock
+    BITBAND_U32( SIM_SCGC4, SCGC4_UART0_BIT ) = 0x01;
     /****************************************************************
      * some code lifted from Teensyduino Core serial1.c
      ****************************************************************/
     CORE_PIN0_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_PFE | PORT_PCR_MUX(3);
 	CORE_PIN1_CONFIG = PORT_PCR_DSE | PORT_PCR_SRE | PORT_PCR_MUX(3);
-	UART0_BDH = (divisor >> 13) & 0x1F;
-	UART0_BDL = (divisor >> 5) & 0xFF;
+	UART0_BDH = ( divisor >> 13 ) & 0x1F;
+	UART0_BDL = ( divisor >> 5 ) & 0xFF;
 	UART0_C4 = divisor & 0x1F;
 	UART0_C1 = UART_C1_ILT;
     // TODO: Use UART0 fifo with dma
 	UART0_TWFIFO = 1; // tx watermark, causes C5_TDMAS DMA request
 	UART0_RWFIFO = 1; // rx watermark, causes C5_RDMAS DMA request
-	UART0_PFIFO = UART_PFIFO_TXFE | UART_PFIFO_RXFE;
+	UART0_PFIFO = UART_PFIFO_TXFE;
     UART0_C2 = C2_TX_INACTIVE;
     UART0_C5 = UART_DMA_ENABLE; // setup Serial1 tx,rx to use dma
-    if (loopBack) UART0_C1 |= UART_C1_LOOPS; // Set internal loop1Back
+    if ( loopBack ) UART0_C1 |= UART_C1_LOOPS; // Set internal loop1Back
+    //NVIC_ENABLE_IRQ(IRQ_UART0_STATUS);
     /****************************************************************
      * DMA TX setup
      ****************************************************************/
-    // Use default configuration
-    if (DMA_CR != 0) DMA_CR = 0;
-    // Destination address
-    DMA_TCD4_DADDR = &UART0_D;
-    // Restore source address after major loop
-    DMA_TCD4_SLAST = 0;
-    // source address offset (1 byte)
-    DMA_TCD4_SOFF = 1;
-    // Destination offset (0 byte)
-    DMA_TCD4_DOFF = 0;
-    // Restore destination address after major loop
-    DMA_TCD4_DLASTSGA = 0;
-    // Source and destination size 8 bit
-    DMA_TCD4_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
-    // Number of bytes to transfer (in each service request)
-    DMA_TCD4_NBYTES_MLNO = 1;//UART0_TWFIFO;
-    // Enable interrupt (end-of-major loop) / Clear ERQ bit at end of Major Loop
-    //DMA_TCD4_CSR = DMA_TCD_CSR_INTHALF | DMA_TCD_CSR_INTMAJOR | DMA_TCD_CSR_DREQ | DMA_TCD_CSR_DONE;
-    DMA_TCD4_CSR = DMA_TCD_CSR_INTMAJOR | DMA_TCD_CSR_DREQ | DMA_TCD_CSR_DONE;
-    DMAMUX0_CHCFG4 = DMAMUX_DISABLE;
-    // enable DMA MUX
-    DMAMUX0_CHCFG4 = DMAMUX_SOURCE_UART0_TX | DMAMUX_ENABLE;
+    tx.destination( UART0_D );
+    tx.sourceCircular(txBuffer, event.TX_BUFFER_SIZE);
+    tx.attachInterrupt( serial_dma_tx_isr );
+    tx.interruptAtCompletion();
+    tx.disableOnCompletion();
+    tx.triggerAtHardwareEvent(DMAMUX_SOURCE_UART0_TX);
     // set TX priority
-    NVIC_SET_PRIORITY(IRQ_DMA_CH4, IRQ_PRIORITY);
+    //NVIC_SET_PRIORITY(IRQ_DMA_CH4, IRQ_PRIORITY);
     // enable irq
-    NVIC_ENABLE_IRQ(IRQ_DMA_CH4);
+    //NVIC_ENABLE_IRQ(IRQ_DMA_CH4);
     /****************************************************************
      * DMA RX setup
      ****************************************************************/
-    // Source address
-    DMA_TCD5_SADDR = &UART0_D;
-    // Restore source address after major loop
-    DMA_TCD5_SLAST = 0;
-    // source address offset (0 bytes)
-    DMA_TCD5_SOFF = 0;
-    // Destination address
-    DMA_TCD5_DADDR = &rxBuffer[0];
-    // Destination offset (0 byte)
-    DMA_TCD5_DOFF = 1;
-    if (rxTermCharacter == -1) {
-        // Restore destination address after major loop
-        DMA_TCD5_DLASTSGA = -RX_BUFFER_SIZE;
-        // Set loop counts / channel2channel linking disabled
-        DMA_TCD5_CITER_ELINKNO = RX_BUFFER_SIZE;//UART0_RWFIFO;
-        DMA_TCD5_BITER_ELINKNO = RX_BUFFER_SIZE;//UART0_RWFIFO;
-        term_rx_character = -1;
+    if ( rxTermCharacter == -1 && rxTermString == NULL ) {
+        rxBufferSize = event.RX_BUFFER_SIZE;
+        rx.destinationBuffer(rxBuffer, event.RX_BUFFER_SIZE);
     }
     else {
-        // Restore destination address after major loop
-        DMA_TCD5_DLASTSGA = 0;
-        // Set loop counts / channel2channel linking disabled
-        DMA_TCD5_CITER_ELINKNO = 1;//UART0_RWFIFO;
-        DMA_TCD5_BITER_ELINKNO = 1;//UART0_RWFIFO;
-        term_rx_string = rxTermString;
-        term_rx_character = rxTermCharacter;
-        bufSize_rx = RX_BUFFER_SIZE;
-        zeroptr_rx = (uintptr_t*)DMA_TCD5_DADDR;
-        currentptr_rx = zeroptr_rx;
+        rx.destinationCircular(rxBuffer, 1);
+        event.term_rx_string = rxTermString;
+        event.term_rx_character = rxTermCharacter;
+        event.zeroptr_rx = (uintptr_t*)rx.TCD->DADDR;
+        event.currentptr_rx = event.zeroptr_rx;
     }
-    // Source and destination size 8 bit
-    DMA_TCD5_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
-    // Number of bytes to transfer (in each service request)
-    DMA_TCD5_NBYTES_MLNO = 1;//UART0_TWFIFO;
-    // Enable interrupt (end-of-major loop) / Clear ERQ bit at end of Major Loop
-    DMA_TCD5_CSR = DMA_TCD_CSR_INTMAJOR  | DMA_TCD_CSR_DREQ | DMA_TCD_CSR_DONE;
-    // Set Serial1 as source (CH 1), enable DMA MUX
-    DMAMUX0_CHCFG5 = DMAMUX_DISABLE;
-    DMAMUX0_CHCFG5 = DMAMUX_SOURCE_UART0_RX | DMAMUX_ENABLE;
-    // Enable DMA Request 1
-    DMA_ERQ |= DMA_ERQ_ERQ5;
-    // enable irq CH1
-    NVIC_SET_PRIORITY(IRQ_DMA_CH5, IRQ_PRIORITY);
-    NVIC_ENABLE_IRQ(IRQ_DMA_CH5);
+    rx.source(UART0_D);
+    rx.attachInterrupt(serial_dma_rx_isr);
+    rx.interruptAtCompletion();
+    rx.triggerContinuously();
+    rx.triggerAtHardwareEvent(DMAMUX_SOURCE_UART0_RX);
+    rx.enable();
+    /*Serial.printf("rx.channel:\t\t%i\n", rx.channel);
+     Serial.printf("rx.TCD->DADDR:\t\t%p\n", rx.TCD->DADDR);
+     Serial.printf("rx.TCD->SADDR:\t\t%p\n", rx.TCD->SADDR);
+     Serial.printf("rx.TCD->SLAST:\t\t%i\n", rx.TCD->SLAST);
+     Serial.printf("rx.TCD->SOFF:\t\t%i\n", rx.TCD->SOFF);
+     Serial.printf("rx.TCD->DOFF:\t\t%i\n", rx.TCD->DOFF);
+     Serial.printf("rx.TCD->DLASTSGA:\t%i\n", rx.TCD->DLASTSGA);
+     Serial.printf("rx.TCD->ATTR_DST:\t%i\n", rx.TCD->ATTR_DST);
+     Serial.printf("rx.TCD->ATTR_SRC:\t%i\n", rx.TCD->ATTR_SRC);
+     Serial.printf("rx.TCD->BITER_ELINKNO:\t%i\n", rx.TCD->BITER_ELINKNO);
+     Serial.printf("rx.TCD->CITER_ELINKNO:\t%i\n", rx.TCD->CITER_ELINKNO);
+     Serial.printf("rx.TCD->NBYTES:\t\t%i\n", rx.TCD->NBYTES);*/
 }
 
 void Serial1Event::serial_dma_format(uint32_t format) {
@@ -225,25 +167,25 @@ void Serial1Event::serial_dma_format(uint32_t format) {
      ****************************************************************/
     uint8_t c;
     c = UART0_C1;
-    c = (c & ~0x13) | (format & 0x03);      // configure parity
+    c = ( c & ~0x13 ) | ( format & 0x03 );      // configure parity
     if (format & 0x04) c |= 0x10;           // 9 bits (might include parity)
     UART0_C1 = c;
-    if ((format & 0x0F) == 0x04) UART0_C3 |= 0x40; // 8N2 is 9 bit with 9th bit always 1
+    if ( ( format & 0x0F ) == 0x04 ) UART0_C3 |= 0x40; // 8N2 is 9 bit with 9th bit always 1
     c = UART0_S2 & ~0x10;
-    if (format & 0x10) c |= 0x10;           // rx invert
+    if ( format & 0x10 ) c |= 0x10;           // rx invert
     UART0_S2 = c;
     c = UART0_C3 & ~0x10;
-    if (format & 0x20) c |= 0x10;           // tx invert
+    if ( format & 0x20 ) c |= 0x10;           // tx invert
     UART0_C3 = c;
 }
 
-void Serial1Event::serial_dma_end(void) {
-    if (!(SIM_SCGC7 & SIM_SCGC7_DMA)) return;
-    if (!(SIM_SCGC6 & SIM_SCGC6_DMAMUX)) return;
-    if (!(SIM_SCGC4 & SIM_SCGC4_UART0)) return;
-    while ( txFifoCount > 0 ) yield();
-    while (SEND_DONE_TX) yield();
-    delay(20);
+void Serial1Event::serial_dma_end( void ) {
+    if ( !( SIM_SCGC7 & SIM_SCGC7_DMA ) ) return;
+    if ( !( SIM_SCGC6 & SIM_SCGC6_DMAMUX ) ) return;
+    if ( !( SIM_SCGC4 & SIM_SCGC4_UART0 ) ) return;
+    while ( sendSize ) ;
+    while ( event.isTransmitting ) ;
+    //delay(20);
     /****************************************************************
      * serial1 end, from teensduino core, serial1.c
      ****************************************************************/
@@ -252,149 +194,95 @@ void Serial1Event::serial_dma_end(void) {
 	CORE_PIN1_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX(1);
     // clear Serial1 dma enable rx/tx bits
     UART0_C5 = UART_DMA_DISABLE;
-    rxHead = rxTail = 0;
+    event.rxHead = event.rxTail = 0;
 }
 
-void Serial1Event::serial_dma_set_transmit_pin(uint8_t pin) {
+void Serial1Event::serial_dma_set_transmit_pin( uint8_t pin ) {
     // TODO: need to update var when finish transmitting serial for RS485
     pinMode(pin, OUTPUT);
 	digitalWrite(pin, LOW);
-	transmit_pin = portOutputRegister(pin);
+	event.transmit_pin = portOutputRegister( pin );
 }
 
-void Serial1Event::serial_dma_putchar(uint32_t c) {
-    serial_dma_write(&c, 1);
+void Serial1Event::serial_dma_putchar( uint32_t c ) {
+    serial_dma_write( &c, 1 );
 }
 
-void Serial1Event::serial_dma_write(const void *buf, unsigned int count) {
-    const uint8_t *buffer = (const uint8_t *)buf;
-    int fifoSlots = count/TX1_PACKET_SIZE;
-    int remainder = count%TX1_PACKET_SIZE;
-    int totalPacks = fifoSlots + txFifoCount + 1;
-    term_rx_character = rxTermCharacter;
-    if ( totalPacks > TX_FIFO_SIZE ) return;
-    //if ( fifoSlots != 0 ) {
-        for (int i = 0; i < fifoSlots; i++) {
-            // start inserting new items into the fifo circular buffer
-            tx1_fifo_t* p = &tx_memory_pool[txHead];
-            volatile uint8_t* fifopack = p->packet;
-            // store current packet size in the fifo buffer
-            p->size = TX1_PACKET_SIZE;
-            // update tx event trigger
-            p->eventTrigger = false;
-            int pakSize = TX1_PACKET_SIZE;
-            do {
-                *fifopack++ = *buffer++;
-            } while ( --pakSize ) ;
-            // packet count
-            ++txFifoCount;
-            txHead = txHead < ( TX_FIFO_SIZE - 1 ) ? txHead + 1 : 0;
+void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
+    int head = event.txHead;
+    int tail = event.txTail;
+    int next = head + count;
+    sendSize += count;
+    if (sendSize > event.TX_BUFFER_SIZE || abs(head - tail) >= event.TX_BUFFER_SIZE) {
+        sendSize = 0;
+        return;
+    }
+    if (next >= event.TX_BUFFER_SIZE) {
+        int over = next - event.TX_BUFFER_SIZE;
+        int under = event.TX_BUFFER_SIZE - head;
+        if (under) {
+            __disable_irq();
+            memcpy_fast(txBuffer+head, buf, under);
+            __enable_irq();
         }
-        if ( remainder > 0 ) {
-            // start inserting new items into the fifo circular buffer
-            tx1_fifo_t* p = &tx_memory_pool[txHead];
-            volatile uint8_t* fifopack = p->packet;
-            // store current packet size in the fifo buffer
-            p->size = remainder ;
-            // update tx event trigger
-            p->eventTrigger = true;
-            do {
-                *fifopack++ = *buffer++;
-            } while ( --remainder ) ;
-            p->packet[p->size] = 0;
-            // packet count
-            ++txFifoCount;
-            txHead = txHead < ( TX_FIFO_SIZE - 1 ) ? txHead + 1 : 0;
+        if (over) {
+            __disable_irq();
+            memcpy_fast(txBuffer, buf+under, over);
+            __enable_irq();
         }
-    /*}
+        head = over;
+    }
     else {
-        // start inserting new items into the fifo circular buffer
-        tx1_fifo_t* p = &tx_memory_pool[txHead];
-        volatile uint8_t* fifopack = p->packet;
-        // store current packet size in the fifo buffer
-        p->size = count;
-        // update tx event trigger
-        p->eventTrigger = true;
-        int pakSize = p->size;
-        do {
-            *fifopack++ = *buffer++;
-        } while ( --pakSize ) ;
-        // packet count
-        ++txFifoCount;
-        txHead = txHead < ( TX_FIFO_SIZE - 1 ) ? txHead + 1 : 0;
-    }*/
-    //------------------------------------------------------------------
-    // return if packets are still in transmission
-    if(!txDone) return;
-    //------------------------------------------------------------------
-    //Serial.printf("WRITE | count: %02i | head: %02i | tail: %02i\n",txFifoCount, txHead, txTail);
-    __disable_irq();
-    tx1_fifo_t* p = &tx_memory_pool[txTail];
-    // DMA transfer requests enabled
-    UART0_C2 |= UART_C2_TIE;
-    // set minor loop counts
-    DMA_TCD4_CITER_ELINKNO = p->size;
-    DMA_TCD4_BITER_ELINKNO = p->size;
-    // source address
-    DMA_TCD4_SADDR = p->packet;
-    DMA_SERQ = 4;
-    //------------------------------------------------------------------
-    // siganl packet transmission in progress, start adding to buffer
-    txDone = false;
-    __enable_irq();
-    //return txFifoCount;
-
+       __disable_irq();
+       memcpy_fast(txBuffer+head, buf, count);
+       head += count;
+       __enable_irq();
+    }
+    event.txHead = head;
+    if (!event.isTransmitting) {
+        __disable_irq();
+        tx.TCD->CITER = count;
+        tx.TCD->BITER = count;
+        tx.enable();
+        sendSize -= count;
+        event.isTransmitting = true;
+        __enable_irq();
+        Serial.println();
+    }
 }
 
-void Serial1Event::serial_dma_flush(void) {
-    while ( txFifoCount != 0 ) yield();
-    while ( SEND_DONE_TX ) yield();
+void Serial1Event::serial_dma_flush( void ) {
+    // wait for any remainding dma transfers to complete
+    while ( sendSize ) ;
+    while ( event.isTransmitting ) ;
 }
 
-int Serial1Event::serial_dma_available(void) {
+int Serial1Event::serial_dma_available( void ) {
     uint32_t head, tail;
-    head = RX_BUFFER_SIZE - DMA_TCD5_CITER_ELINKNO;
-    tail = rxTail;
-    if (head >= tail) return head - tail;
-    return RX_BUFFER_SIZE + head - tail;
+    head = event.RX_BUFFER_SIZE - rx.TCD->CITER_ELINKNO;
+    tail = event.rxTail;
+    if ( head >= tail ) return head - tail;
+    return event.RX_BUFFER_SIZE + head - tail;
 }
 
-int Serial1Event::serial_dma_getchar(void) {
+int Serial1Event::serial_dma_getchar( void ) {
     uint32_t head, tail;
     int c;
-    head = RX_BUFFER_SIZE - DMA_TCD5_CITER_ELINKNO;
-    tail = rxTail;
+    head = event.RX_BUFFER_SIZE - rx.TCD->CITER_ELINKNO;
+    tail = event.rxTail;
     c = rxBuffer[tail];
-    if (head == tail) return -1;
-    if (++tail >= RX_BUFFER_SIZE) tail = 0;
-    rxTail = tail;
+    if ( head == tail ) return -1;
+    if ( ++tail >= event.RX_BUFFER_SIZE ) tail = 0;
+    event.rxTail = tail;
     return c;
 }
 
-int Serial1Event::serial_dma_peek(void) {
+int Serial1Event::serial_dma_peek( void ) {
     uint32_t head;
-    head = RX_BUFFER_SIZE - DMA_TCD5_CITER_ELINKNO;
+    head = event.RX_BUFFER_SIZE - rx.TCD->CITER_ELINKNO;
     return head;
 }
 
-void Serial1Event::serial_dma_clear(void) {
+void Serial1Event::serial_dma_clear( void ) {
     
 }
-
-void Serial1Event::serial_dma_print(const char *p) {
-    
-}
-
-void Serial1Event::serial_dma_phex(uint32_t n) {
-    
-}
-
-void Serial1Event::serial_dma_phex16(uint32_t n) {
-    
-}
-
-void Serial1Event::serial_dma_phex32(uint32_t n) {
-    
-}
-
-

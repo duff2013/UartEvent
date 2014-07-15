@@ -19,10 +19,10 @@
 #include <SerialEvent.h>
 #include "monroe.h"
 
-#define TX_BUFFER_SIZE 6000
+#define TX_BUFFER_SIZE 8192
 #define RX_BUFFER_SIZE 128
 
-Serial1Event Event1 = Serial1Event();
+Serial1Event Event1;
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);

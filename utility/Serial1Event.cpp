@@ -63,9 +63,9 @@ void Serial1Event::serial_dma_tx_isr( void ) {
     } else {
         __disable_irq();
         tail = head;
-        event.isTransmitting = false;
         __enable_irq();
         TX_CALLBACK();
+        event.isTransmitting = false;
     }
     event.txTail = tail;
     UART0_C2 |= UART_C2_TIE;

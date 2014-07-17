@@ -19,7 +19,7 @@ Events that are supported currently are:<br>
 > This library allows you to declare how much memory for transmitting and receiving data. Rx and TX memory is just an uint8_t array buffer. RX memory is can be any size while TX memory has to be a power of two.<br><br>
 
 <b>Transmitting:</b><br>
-> While traditional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine, SerialEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the base class is "Stream" most of the normal print statements work as you would expect. A couple of caveats need to be expressed now.<br><br>
+> While traditional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine, SerialEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the base class is "Stream" most of the normal print statements work as you would expect. A couple of caveats need to be expressed now.<br>
 The reason the library use this setup, it allows you to just copy the data to its buffers and move on, not having to wait for each character to send. This makes it somewhat none blocking. The biggest overhead in sending is only just coping data to the transmit buffer. <br><br>
 
 <b>Receiving:</b><br>
@@ -31,7 +31,7 @@ The DMA engine allows you to receive data which will signal an event handler tha
 <br>
 
 <b>Performance:</b><br>
->The performance is on par with the Hardware Serial Class in the Teensduino core, with the biggest advantage is being able to send a data and move on very quickly. Sending a 5000 byte packet takes only ~260uS to get throught the print statement code while this would take much longer using the standard Serial print..<br><br>
+>The performance is on par with the Hardware Serial Class in the Teensduino core, with the biggest advantage is being able to send a data and move on very quickly. Sending a 5000 byte packet takes only ~260uS @24MHz to get throught the print statement code while this would take much longer using the standard Serial print..<br><br>
 </ul>
 
 <b>Usage:</b><br>

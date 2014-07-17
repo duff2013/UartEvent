@@ -16,11 +16,11 @@ Events that are supported currently are:<br>
 4.  Transmit Complete<br>
 
 <b>Memory:</b><br>
-> This library allows you to declare how much memory for transmitting and receiving data. Rx and TX memory is just an uint8_t array buffer. RX memory is can be any size while TX memory has to be a power of two.<br><br>
+> This library allows you to declare how much memory for transmitting and receiving data. Rx and TX memory is just an uint8_t array buffer. RX memory is can be any size while TX memory has to be a power of two.<br>
 
 <b>Transmitting:</b><br>
 > While traditional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine, SerialEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the base class is "Stream" most of the normal print statements work as you would expect. A couple of caveats need to be expressed now.<br>
-The reason the library use this setup, it allows you to just copy the data to its buffers and move on, not having to wait for each character to send. This makes it somewhat none blocking. The biggest overhead in sending is only just coping data to the transmit buffer. <br><br>
+The reason the library use this setup, it allows you to just copy the data to its buffers and move on, not having to wait for each character to send. This makes it somewhat none blocking. The biggest overhead in sending is only just coping data to the transmit buffer.<br>
 
 <b>Receiving:</b><br>
 > Users have more control over how they want to capture data using this library using events instead of polling methods. While you can use polling, registering events can be quite useful. The three events that are currently implemented are explained below:<br>

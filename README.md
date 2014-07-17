@@ -31,7 +31,7 @@ The DMA engine allows you to receive data which will signal an event handler tha
 <br>
 
 <b>Performance:</b><br>
->The performance is on par with the Hardware Serial Class in the Teensduino core, with the biggest advantage is being able to send a data and move on very quickly. Sending a 5000 byte packet takes only ~260uS @24MHz to get throught the print statement code while this would take much longer using the standard Serial print..<br><br>
+>The performance is on par with the Hardware Serial Class in the Teensduino core, with the biggest advantage is being able to send a data and move on very quickly. Sending a 5000 byte packet takes only ~260uS @24MHz to get throught the print statement code while this would take much longer using the standard Serial print..<br>
 </ul>
 
 <b>Usage:</b><br>

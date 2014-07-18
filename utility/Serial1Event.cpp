@@ -37,57 +37,58 @@ DMAChannel              Serial1Event::rx;
 volatile uint8_t        Serial1Event::txUsedMemory;
 volatile uint8_t        Serial1Event::rxUsedMemory;
 volatile unsigned char  *Serial1Event::rxBuffer;
-volatile uint32_t       Serial1Event::rxBufferSize;
-
 volatile unsigned char  *Serial1Event::txBuffer;
-
-volatile int Serial1Event::sendSize;
+volatile uint32_t       Serial1Event::rxBufferSize;
 // -------------------------------------------ISR------------------------------------------
 void Serial1Event::serial_dma_tx_isr( void ) {
-    tx.clearInterrupt();
+    tx.clearInterrupt( );
     int head = event.txHead;
     int tail = event.txTail;
-    int mysize = sendSize;
-    if (sendSize) {
-        __disable_irq();
+    
+    if ( (tail + tx.TCD->CITER_ELINKNO) >= event.TX_BUFFER_SIZE ) {
+        tail += tx.TCD->CITER_ELINKNO - event.TX_BUFFER_SIZE;
+    } else {
+       tail += tx.TCD->CITER_ELINKNO;
+    }
+    
+    if ( head != tail ) {
         event.isTransmitting = true;
-        tail += sendSize;
-        if (tail >= event.TX_BUFFER_SIZE) {
-            tail -= event.TX_BUFFER_SIZE;
+        int size;
+        if ( tail > head ) {
+            size = ( event.TX_BUFFER_SIZE - tail ) + head;
+        } else {
+            size = head - tail;
         }
-        tx.TCD->CITER = sendSize;
-        tx.TCD->BITER = sendSize;
-        sendSize = 0;
+        __disable_irq( );
+        tx.TCD->CITER = size;
+        tx.TCD->BITER = size;
         tx.enable();
         __enable_irq();
     } else {
-        __disable_irq();
-        tail = head;
-        __enable_irq();
-        TX_CALLBACK();
         event.isTransmitting = false;
+        TX_CALLBACK( );
     }
     event.txTail = tail;
     UART0_C2 |= UART_C2_TIE;
 }
 
 void Serial1Event::serial_dma_rx_isr( void ) {
-    rx.clearInterrupt();
+    rx.clearInterrupt( );
     if ( event.term_rx_character != -1 ) {
         static uint32_t byteCount_rx = 1;
         rxBufferSize = byteCount_rx;
-        if (( (uint8_t)*event.currentptr_rx == event.term_rx_character) || ( byteCount_rx == event.RX_BUFFER_SIZE ) ) {
-            event.currentptr_rx = (uintptr_t*)rx.TCD->DADDR;
+        if (( ( uint8_t )*event.currentptr_rx == event.term_rx_character) || ( byteCount_rx == event.RX_BUFFER_SIZE ) ) {
+            event.currentptr_rx = ( uintptr_t * )rx.TCD->DADDR;
             *event.currentptr_rx = 0;
             rx.TCD->DADDR = event.zeroptr_rx;
             byteCount_rx = 1;
-            RX_CALLBACK();
+            RX_CALLBACK( );
         }
         else { ++byteCount_rx; }
         event.currentptr_rx = (uintptr_t*)rx.TCD->DADDR;
     }
     else {
-        RX_CALLBACK();
+        RX_CALLBACK( );
     }
     
 }
@@ -119,31 +120,32 @@ void Serial1Event::serial_dma_begin( uint32_t divisor ) {
     tx.destination( UART0_D );
     tx.sourceCircular(txBuffer, event.TX_BUFFER_SIZE);
     tx.attachInterrupt( serial_dma_tx_isr );
-    tx.interruptAtCompletion();
-    tx.disableOnCompletion();
-    tx.triggerAtHardwareEvent(DMAMUX_SOURCE_UART0_TX);
-    int sync_address = (int)&txBuffer[0] - (int)tx.TCD->SADDR;
-    Serial.printf("SADDR: %p | txBuffer: %p | sync_address: %X\n\n", tx.TCD->SADDR, &txBuffer[0], sync_address);
+    tx.interruptAtCompletion( );
+    tx.disableOnCompletion( );
+    //tx.interruptAtHalf( );
+    tx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART0_TX );
+    //int sync_address = ( int )&txBuffer[0] - ( int )tx.TCD->SADDR;
+    //Serial.printf("SADDR: %p | txBuffer: %p | sync_address: %X\n\n", tx.TCD->SADDR, &txBuffer[0], sync_address);
     /****************************************************************
      * DMA RX setup
      ****************************************************************/
     if ( rxTermCharacter == -1 && rxTermString == NULL ) {
         rxBufferSize = event.RX_BUFFER_SIZE;
-        rx.destinationBuffer(rxBuffer, event.RX_BUFFER_SIZE);
+        rx.destinationBuffer( rxBuffer, event.RX_BUFFER_SIZE );
     }
     else {
         rx.destinationCircular(rxBuffer, 1);
         event.term_rx_string = rxTermString;
         event.term_rx_character = rxTermCharacter;
-        event.zeroptr_rx = (uintptr_t*)rx.TCD->DADDR;
+        event.zeroptr_rx = ( uintptr_t * )rx.TCD->DADDR;
         event.currentptr_rx = event.zeroptr_rx;
     }
-    rx.source(UART0_D);
-    rx.attachInterrupt(serial_dma_rx_isr);
-    rx.interruptAtCompletion();
-    rx.triggerContinuously();
-    rx.triggerAtHardwareEvent(DMAMUX_SOURCE_UART0_RX);
-    rx.enable();
+    rx.source( UART0_D );
+    rx.attachInterrupt( serial_dma_rx_isr );
+    rx.interruptAtCompletion( );
+    rx.triggerContinuously( );
+    rx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART0_RX );
+    rx.enable( );
     /*Serial.printf("rx.channel:\t\t%i\n", rx.channel);
      Serial.printf("rx.TCD->DADDR:\t\t%p\n", rx.TCD->DADDR);
      Serial.printf("rx.TCD->SADDR:\t\t%p\n", rx.TCD->SADDR);
@@ -180,9 +182,8 @@ void Serial1Event::serial_dma_end( void ) {
     if ( !( SIM_SCGC7 & SIM_SCGC7_DMA ) ) return;
     if ( !( SIM_SCGC6 & SIM_SCGC6_DMAMUX ) ) return;
     if ( !( SIM_SCGC4 & SIM_SCGC4_UART0 ) ) return;
-    while ( sendSize ) ;
-    while ( event.isTransmitting ) ;
-    //delay(20);
+    flush();
+    delay(20);
     /****************************************************************
      * serial1 end, from teensduino core, serial1.c
      ****************************************************************/
@@ -191,7 +192,7 @@ void Serial1Event::serial_dma_end( void ) {
 	CORE_PIN1_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX(1);
     // clear Serial1 dma enable rx/tx bits
     UART0_C5 = UART_DMA_DISABLE;
-    event.rxHead = event.rxTail = 0;
+    event.txHead = event.txTail = 0;
 }
 
 void Serial1Event::serial_dma_set_transmit_pin( uint8_t pin ) {
@@ -209,54 +210,44 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
     int head = event.txHead;
     int tail = event.txTail;
     int next = head + count;
-    sendSize += count;
-    if (sendSize > event.TX_BUFFER_SIZE) {
-        if (event.isTransmitting) DMA_CR |= DMA_CR_ECX;
-        tx.TCD->CITER = 1;
-        tx.TCD->BITER = 1;
-        tx.TCD->SADDR = &txBuffer[0];
-        head = 1;
-        event.txHead = head;
-        sendSize = 0;
-        return;
-    }
-    if (next >= event.TX_BUFFER_SIZE) {
+    
+    if ( next >= event.TX_BUFFER_SIZE ) {
+        int newhead;
+        newhead = next - event.TX_BUFFER_SIZE;
+        if (newhead >= tail) return;
+    } else next = 0;
+    
+    if ( next ) {
         int over = next - event.TX_BUFFER_SIZE;
         int under = event.TX_BUFFER_SIZE - head;
-        if (under) {
-            __disable_irq();
-            memcpy_fast(txBuffer+head, buf, under);
-            __enable_irq();
-        }
-        if (over) {
-            __disable_irq();
-            memcpy_fast(txBuffer, buf+under, over);
-            __enable_irq();
-        }
+        if ( under ) memcpy_fast( txBuffer+head, buf, under );
+        if ( over ) memcpy_fast( txBuffer, buf+under, over );
         head = over;
     }
     else {
-        __disable_irq();
-        memcpy_fast(txBuffer+head, buf, count);
+        memcpy_fast( txBuffer+head, buf, count );
         head += count;
-        __enable_irq();
     }
     event.txHead = head;
-    if (!event.isTransmitting) {
+    
+    if ( !event.isTransmitting ) {
+        event.isTransmitting = true;
         __disable_irq();
         tx.TCD->CITER = count;
         tx.TCD->BITER = count;
         tx.enable();
-        sendSize -= count;
-        event.isTransmitting = true;
         __enable_irq();
-        //Serial.println();
     }
 }
 
 void Serial1Event::serial_dma_flush( void ) {
     // wait for any remainding dma transfers to complete
-    while ( sendSize ) ;
+    int head = event.txHead;
+    int tail = event.txTail;
+    while ( head != tail ) {
+        head = event.txHead;
+        tail = event.txTail;
+    }
     while ( event.isTransmitting ) ;
 }
 

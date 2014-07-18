@@ -44,13 +44,12 @@ void Serial1Event::serial_dma_tx_isr( void ) {
     tx.clearInterrupt( );
     int head = event.txHead;
     int tail = event.txTail;
-    
     if ( (tail + tx.TCD->CITER_ELINKNO) >= event.TX_BUFFER_SIZE ) {
         tail += tx.TCD->CITER_ELINKNO - event.TX_BUFFER_SIZE;
     } else {
        tail += tx.TCD->CITER_ELINKNO;
     }
-    
+    //Serial.printf("head: %04i | tail: %04i\n", head, tail);
     if ( head != tail ) {
         event.isTransmitting = true;
         int size;
@@ -210,14 +209,48 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
     int head = event.txHead;
     int tail = event.txTail;
     int next = head + count;
+
+    Serial.printf("head: %04i | tail: %04i | next: %i\n", head, tail, next);
+    if (count > event.TX_BUFFER_SIZE) {
+        int bufcount = (count/event.TX_BUFFER_SIZE);
+        int bufremainder = count%event.TX_BUFFER_SIZE;
+        //Serial.printf("count: %i | rem: %i\n", bufcount, bufremainder);
+        do {
+            flush();
+            tx.TCD->SADDR = &txBuffer[0];
+            memcpy_fast( txBuffer, buf+head, event.TX_BUFFER_SIZE );
+            
+            event.isTransmitting = true;
+            __disable_irq();
+            tx.TCD->CITER = event.TX_BUFFER_SIZE;
+            tx.TCD->BITER = event.TX_BUFFER_SIZE;
+            tx.enable();
+            __enable_irq();
+            
+            head += event.TX_BUFFER_SIZE;
+        } while (--bufcount);
+        
+        flush();
+        event.txHead = bufremainder;
+        if (bufremainder) {
+            tx.TCD->SADDR = &txBuffer[0];
+            memcpy_fast( txBuffer, buf+head, bufremainder );
+            //Serial.write((uint8_t*)txBuffer, bufremainder);
+            //Serial.println();
+            event.isTransmitting = true;
+            __disable_irq();
+            tx.TCD->CITER = bufremainder;
+            tx.TCD->BITER = bufremainder;
+            tx.enable();
+            __enable_irq();
+            flush();
+        }
+        event.txHead = event.txTail = 0;
+        return;
+    }
     
-    if ( next >= event.TX_BUFFER_SIZE ) {
-        int newhead;
-        newhead = next - event.TX_BUFFER_SIZE;
-        if (newhead >= tail) return;
-    } else next = 0;
-    
-    if ( next ) {
+    bool bufwrap = next >= event.TX_BUFFER_SIZE ? true : false;
+    if ( bufwrap ) {
         int over = next - event.TX_BUFFER_SIZE;
         int under = event.TX_BUFFER_SIZE - head;
         if ( under ) memcpy_fast( txBuffer+head, buf, under );

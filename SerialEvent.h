@@ -47,7 +47,7 @@ private:
     typedef void (*ISR)();
     
     static volatile unsigned char* txBuffer;
-    static volatile int sendSize;
+    
     static void serial_dma_tx_isr( void ) ;
     static void serial_dma_rx_isr( void ) ;
     static ISR RX_CALLBACK;
@@ -73,7 +73,6 @@ public:
         loopBack( false ),
         half( false )
     {
-        sendSize = 0;
         event = { -1, NULL, 0, 0, 0, 0, nullptr, nullptr, nullptr, 0, 0, false };
     }
     virtual void begin( uint32_t baud, uint32_t format ) {

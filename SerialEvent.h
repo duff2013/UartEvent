@@ -73,7 +73,7 @@ public:
         loopBack( false ),
         half( false )
     {
-        event = { -1, NULL, 0, 0, 0, 0, nullptr, nullptr, nullptr, 0, 0, false };
+        event = { -1, NULL, 0, 0, 0, 0, nullptr, nullptr, nullptr, 0, 0, false, 0 };
     }
     virtual void begin( uint32_t baud, uint32_t format ) {
         serial_dma_format(format);

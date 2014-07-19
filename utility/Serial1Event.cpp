@@ -44,6 +44,7 @@ void Serial1Event::serial_dma_tx_isr( void ) {
     tx.clearInterrupt( );
     int head = event.txHead;
     int tail = event.txTail;
+    event.bufTotalSize -= tx.TCD->CITER_ELINKNO;
     if ( (tail + tx.TCD->CITER_ELINKNO) >= event.TX_BUFFER_SIZE ) {
         tail += tx.TCD->CITER_ELINKNO - event.TX_BUFFER_SIZE;
     } else {
@@ -209,14 +210,15 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
     int head = event.txHead;
     int tail = event.txTail;
     int next = head + count;
+    event.bufTotalSize += count;
 
-    Serial.printf("head: %04i | tail: %04i | next: %i\n", head, tail, next);
     if (count > event.TX_BUFFER_SIZE) {
         int bufcount = (count/event.TX_BUFFER_SIZE);
         int bufremainder = count%event.TX_BUFFER_SIZE;
-        //Serial.printf("count: %i | rem: %i\n", bufcount, bufremainder);
+        flush();
+        event.txHead = event.txTail = 0;
+        head = 0;
         do {
-            flush();
             tx.TCD->SADDR = &txBuffer[0];
             memcpy_fast( txBuffer, buf+head, event.TX_BUFFER_SIZE );
             
@@ -228,15 +230,12 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
             __enable_irq();
             
             head += event.TX_BUFFER_SIZE;
+            flush();
         } while (--bufcount);
-        
-        flush();
         event.txHead = bufremainder;
         if (bufremainder) {
             tx.TCD->SADDR = &txBuffer[0];
             memcpy_fast( txBuffer, buf+head, bufremainder );
-            //Serial.write((uint8_t*)txBuffer, bufremainder);
-            //Serial.println();
             event.isTransmitting = true;
             __disable_irq();
             tx.TCD->CITER = bufremainder;
@@ -245,10 +244,20 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
             __enable_irq();
             flush();
         }
+        tx.TCD->SADDR = &txBuffer[0];
+        event.bufTotalSize = 0;
         event.txHead = event.txTail = 0;
         return;
     }
     
+    if (event.bufTotalSize > event.TX_BUFFER_SIZE) {
+        flush();
+        //tx.TCD->SADDR = &txBuffer[0];
+        //head = tail = 0;
+        //event.txHead = event.txTail = 0;
+        //scount = event.bufTotalSize  - event.TX_BUFFER_SIZE;
+    }
+
     bool bufwrap = next >= event.TX_BUFFER_SIZE ? true : false;
     if ( bufwrap ) {
         int over = next - event.TX_BUFFER_SIZE;
@@ -262,7 +271,7 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
         head += count;
     }
     event.txHead = head;
-    
+    //Serial.printf("head: %04i | tail: %04i | next: %04i | count: %04i | addy1: %p | addy2: %p\n", head, tail, next, count, tx.TCD->SADDR, &txBuffer[0]);
     if ( !event.isTransmitting ) {
         event.isTransmitting = true;
         __disable_irq();

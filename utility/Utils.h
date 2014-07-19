@@ -62,6 +62,7 @@ typedef struct __attribute__((packed)) {
     volatile uint16_t TX_BUFFER_SIZE;
     volatile uint16_t RX_BUFFER_SIZE;
     volatile boolean isTransmitting;
+    volatile uint32_t bufTotalSize;
 } event_params_t;
 
 // ------------------------------Serial1---------------------------------

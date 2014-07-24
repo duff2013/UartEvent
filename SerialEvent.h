@@ -44,7 +44,7 @@ private:
     static event_params_t event;
     static DMAChannel tx;
     static DMAChannel rx;
-    typedef void (*ISR)();
+    typedef void (*ISR)( );
     
     static volatile unsigned char* txBuffer;
     
@@ -52,7 +52,7 @@ private:
     static void serial_dma_rx_isr( void ) ;
     static ISR RX_CALLBACK;
     static ISR TX_CALLBACK;
-    static void defaultCallback() { yield(); }
+    static void defaultCallback() {  }
     
     void serial_dma_begin( uint32_t divisor );
     void serial_dma_format( uint32_t format );
@@ -76,11 +76,11 @@ public:
         event = { -1, NULL, 0, 0, 0, 0, nullptr, nullptr, nullptr, 0, 0, false, 0 };
     }
     virtual void begin( uint32_t baud, uint32_t format ) {
-        serial_dma_format(format);
-        serial_dma_begin(BAUD2DIV(baud));
+        serial_dma_format( format );
+        serial_dma_begin( BAUD2DIV( baud ) );
     }
     virtual void begin( uint32_t baud )           { serial_dma_begin( BAUD2DIV( baud ) ); }
-	virtual void end(void)                        { serial_dma_end(); }
+	virtual void end( void )                      { serial_dma_end(); }
 	virtual void transmitterEnable( uint8_t pin ) { serial_dma_set_transmit_pin( pin ); }
 	virtual int available( void )                 { return serial_dma_available( ); }
 	virtual int peek( void )                      { return serial_dma_peek( ); }

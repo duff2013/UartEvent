@@ -146,18 +146,6 @@ void Serial1Event::serial_dma_begin( uint32_t divisor ) {
     rx.triggerContinuously( );
     rx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART0_RX );
     rx.enable( );
-    /*Serial.printf("rx.channel:\t\t%i\n", rx.channel);
-     Serial.printf("rx.TCD->DADDR:\t\t%p\n", rx.TCD->DADDR);
-     Serial.printf("rx.TCD->SADDR:\t\t%p\n", rx.TCD->SADDR);
-     Serial.printf("rx.TCD->SLAST:\t\t%i\n", rx.TCD->SLAST);
-     Serial.printf("rx.TCD->SOFF:\t\t%i\n", rx.TCD->SOFF);
-     Serial.printf("rx.TCD->DOFF:\t\t%i\n", rx.TCD->DOFF);
-     Serial.printf("rx.TCD->DLASTSGA:\t%i\n", rx.TCD->DLASTSGA);
-     Serial.printf("rx.TCD->ATTR_DST:\t%i\n", rx.TCD->ATTR_DST);
-     Serial.printf("rx.TCD->ATTR_SRC:\t%i\n", rx.TCD->ATTR_SRC);
-     Serial.printf("rx.TCD->BITER_ELINKNO:\t%i\n", rx.TCD->BITER_ELINKNO);
-     Serial.printf("rx.TCD->CITER_ELINKNO:\t%i\n", rx.TCD->CITER_ELINKNO);
-     Serial.printf("rx.TCD->NBYTES:\t\t%i\n", rx.TCD->NBYTES);*/
 }
 
 void Serial1Event::serial_dma_format(uint32_t format) {
@@ -213,11 +201,13 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
     event.bufTotalSize += count;
 
     if (count > event.TX_BUFFER_SIZE) {
-        int bufcount = (count/event.TX_BUFFER_SIZE);
+        int bufcount = ( count/event.TX_BUFFER_SIZE );
         int bufremainder = count%event.TX_BUFFER_SIZE;
+        int halfbuf = event.TX_BUFFER_SIZE;
         flush();
         event.txHead = event.txTail = 0;
         head = 0;
+        //TCD->CSR |= DMA_TCD_CSR_INTHALF;
         do {
             tx.TCD->SADDR = &txBuffer[0];
             memcpy_fast( txBuffer, buf+head, event.TX_BUFFER_SIZE );

@@ -1,6 +1,6 @@
 /*
  ||
- || @file 		SerialEvent.h
+ || @file 	SerialEvent.h
  || @version 	4
  || @author 	Colin Duffy
  || @contact 	cmduffy@engr.psu.edu

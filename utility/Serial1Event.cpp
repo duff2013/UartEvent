@@ -176,8 +176,8 @@ void Serial1Event::serial_dma_end( void ) {
      * serial1 end, from teensduino core, serial1.c
      ****************************************************************/
     UART0_C2 = 0;
-	CORE_PIN0_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX(1);
-	CORE_PIN1_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX(1);
+    CORE_PIN0_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX(1);
+    CORE_PIN1_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX(1);
     // clear Serial1 dma enable rx/tx bits
     UART0_C5 = UART_DMA_DISABLE;
     event.txHead = event.txTail = 0;

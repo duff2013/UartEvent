@@ -1,6 +1,6 @@
 /*
  ||
- || @file 		Serial1Event.cpp
+ || @file 	Serial1Event.cpp
  || @version 	4
  || @author 	Colin Duffy
  || @contact 	cmduffy@engr.psu.edu
@@ -102,15 +102,15 @@ void Serial1Event::serial_dma_begin( uint32_t divisor ) {
      * some code lifted from Teensyduino Core serial1.c
      ****************************************************************/
     CORE_PIN0_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_PFE | PORT_PCR_MUX(3);
-	CORE_PIN1_CONFIG = PORT_PCR_DSE | PORT_PCR_SRE | PORT_PCR_MUX(3);
-	UART0_BDH = ( divisor >> 13 ) & 0x1F;
-	UART0_BDL = ( divisor >> 5 ) & 0xFF;
-	UART0_C4 = divisor & 0x1F;
-	UART0_C1 = UART_C1_ILT;
+    CORE_PIN1_CONFIG = PORT_PCR_DSE | PORT_PCR_SRE | PORT_PCR_MUX(3);
+    UART0_BDH = ( divisor >> 13 ) & 0x1F;
+    UART0_BDL = ( divisor >> 5 ) & 0xFF;
+    UART0_C4 = divisor & 0x1F;
+    UART0_C1 = UART_C1_ILT;
     // TODO: Use UART0 fifo with dma
-	UART0_TWFIFO = 1; // tx watermark, causes C5_TDMAS DMA request
-	UART0_RWFIFO = 1; // rx watermark, causes C5_RDMAS DMA request
-	UART0_PFIFO = UART_PFIFO_TXFE;
+    UART0_TWFIFO = 1; // tx watermark, causes C5_TDMAS DMA request
+    UART0_RWFIFO = 1; // rx watermark, causes C5_RDMAS DMA request
+    UART0_PFIFO = UART_PFIFO_TXFE;
     UART0_C2 = C2_TX_INACTIVE;
     UART0_C5 = UART_DMA_ENABLE; // setup Serial1 tx,rx to use dma
     if ( loopBack ) UART0_C1 |= UART_C1_LOOPS; // Set internal loop1Back
@@ -186,8 +186,8 @@ void Serial1Event::serial_dma_end( void ) {
 void Serial1Event::serial_dma_set_transmit_pin( uint8_t pin ) {
     // TODO: need to update var when finish transmitting serial for RS485
     pinMode(pin, OUTPUT);
-	digitalWrite(pin, LOW);
-	event.transmit_pin = portOutputRegister( pin );
+    digitalWrite(pin, LOW);
+    event.transmit_pin = portOutputRegister( pin );
 }
 
 void Serial1Event::serial_dma_putchar( uint32_t c ) {

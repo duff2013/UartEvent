@@ -80,21 +80,21 @@ public:
         serial_dma_begin( BAUD2DIV( baud ) );
     }
     virtual void begin( uint32_t baud )           { serial_dma_begin( BAUD2DIV( baud ) ); }
-	virtual void end( void )                      { serial_dma_end(); }
-	virtual void transmitterEnable( uint8_t pin ) { serial_dma_set_transmit_pin( pin ); }
-	virtual int available( void )                 { return serial_dma_available( ); }
-	virtual int peek( void )                      { return serial_dma_peek( ); }
-	virtual int read( void )                      { return serial_dma_getchar( ); }
-	virtual void flush( void )                    { serial_dma_flush( ); }
-	virtual void clear( void )                    { serial_dma_clear( ); }
-	virtual size_t write( uint8_t c )             { serial_dma_putchar( c ); }
-	virtual size_t write( unsigned long n )       { return write( (uint8_t)n ); }
-	virtual size_t write( long n )                { return write( (uint8_t)n ); }
-	virtual size_t write( unsigned int n )        { return write( (uint8_t)n ); }
-	virtual size_t write( int n )                 { return write( (uint8_t)n ); }
+    virtual void end( void )                      { serial_dma_end(); }
+    virtual void transmitterEnable( uint8_t pin ) { serial_dma_set_transmit_pin( pin ); }
+    virtual int available( void )                 { return serial_dma_available( ); }
+    virtual int peek( void )                      { return serial_dma_peek( ); }
+    virtual int read( void )                      { return serial_dma_getchar( ); }
+    virtual void flush( void )                    { serial_dma_flush( ); }
+    virtual void clear( void )                    { serial_dma_clear( ); }
+    virtual size_t write( uint8_t c )             { serial_dma_putchar( c ); }
+    virtual size_t write( unsigned long n )       { return write( (uint8_t)n ); }
+    virtual size_t write( long n )                { return write( (uint8_t)n ); }
+    virtual size_t write( unsigned int n )        { return write( (uint8_t)n ); }
+    virtual size_t write( int n )                 { return write( (uint8_t)n ); }
     virtual size_t write9bit( uint32_t c )        {  }
     
-	virtual size_t write( const uint8_t *buffer, size_t size ) {
+    virtual size_t write( const uint8_t *buffer, size_t size ) {
         serial_dma_write( buffer, size );
         return size;
     }

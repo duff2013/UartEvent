@@ -1,7 +1,7 @@
 /*
  ||
  || @file 	Serial1Event.cpp
- || @version 	4
+ || @version 	5
  || @author 	Colin Duffy
  || @contact 	cmduffy@engr.psu.edu
  || @license

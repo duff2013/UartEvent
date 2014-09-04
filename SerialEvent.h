@@ -65,6 +65,22 @@ private:
     int serial_dma_getchar( void );
     int serial_dma_peek( void );
     void serial_dma_clear( void );
+    
+    static inline void raise_priority( void ) {
+        int priority = nvic_execution_priority();
+        if (priority <= event.priority) {
+            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + tx.channel, priority - 16);
+            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + rx.channel, priority - 16);
+        }
+    }
+    
+    static inline void lower_priority( void ) {
+        int priority = nvic_execution_priority();
+        if (priority <= event.priority) {
+            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + tx.channel, event.priority);
+            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + rx.channel, event.priority);
+        }
+    }
 public:
     Serial1Event() :
         txEventHandler( defaultCallback ),
@@ -153,6 +169,22 @@ private:
     int serial_dma_getchar( void );
     int serial_dma_peek( void );
     void serial_dma_clear( void );
+    
+    static inline void raise_priority( void ) {
+        int priority = nvic_execution_priority();
+        if (priority <= event.priority) {
+            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + tx.channel, priority - 16);
+            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + rx.channel, priority - 16);
+        }
+    }
+    
+    static inline void lower_priority( void ) {
+        int priority = nvic_execution_priority();
+        if (priority <= event.priority) {
+            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + tx.channel, event.priority);
+            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + rx.channel, event.priority);
+        }
+    }
 public:
     Serial2Event() :
     txEventHandler( defaultCallback ),
@@ -241,6 +273,22 @@ private:
     int serial_dma_getchar( void );
     int serial_dma_peek( void );
     void serial_dma_clear( void );
+    
+    static inline void raise_priority( void ) {
+        int priority = nvic_execution_priority();
+        if (priority <= event.priority) {
+            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + tx.channel, priority - 16);
+            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + rx.channel, priority - 16);
+        }
+    }
+    
+    static inline void lower_priority( void ) {
+        int priority = nvic_execution_priority();
+        if (priority <= event.priority) {
+            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + tx.channel, event.priority);
+            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + rx.channel, event.priority);
+        }
+    }
 public:
     Serial3Event() :
     txEventHandler( defaultCallback ),

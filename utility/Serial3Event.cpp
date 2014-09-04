@@ -122,8 +122,8 @@ void Serial3Event::serial_dma_begin( uint32_t divisor ) {
     tx.attachInterrupt( serial_dma_tx_isr );
     tx.interruptAtCompletion( );
     tx.disableOnCompletion( );
-    //tx.interruptAtHalf( );
     tx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART2_TX );
+    event.priority = NVIC_GET_PRIORITY(IRQ_DMA_CH0 + tx.channel);
     //int sync_address = ( int )&txBuffer[0] - ( int )tx.TCD->SADDR;
     //Serial.printf("SADDR: %p | txBuffer: %p | sync_address: %X\n\n", tx.TCD->SADDR, &txBuffer[0], sync_address);
     /****************************************************************
@@ -240,13 +240,7 @@ void Serial3Event::serial_dma_write( const void *buf, unsigned int count ) {
         return;
     }
     
-    if (event.bufTotalSize > event.TX_BUFFER_SIZE) {
-        flush();
-        //tx.TCD->SADDR = &txBuffer[0];
-        //head = tail = 0;
-        //event.txHead = event.txTail = 0;
-        //scount = event.bufTotalSize  - event.TX_BUFFER_SIZE;
-    }
+    if (event.bufTotalSize > event.TX_BUFFER_SIZE) flush();
     
     bool bufwrap = next >= event.TX_BUFFER_SIZE ? true : false;
     if ( bufwrap ) {
@@ -261,7 +255,7 @@ void Serial3Event::serial_dma_write( const void *buf, unsigned int count ) {
         head += count;
     }
     event.txHead = head;
-    //Serial.printf("head: %04i | tail: %04i | next: %04i | count: %04i | addy1: %p | addy2: %p\n", head, tail, next, count, tx.TCD->SADDR, &txBuffer[0]);
+
     if ( !event.isTransmitting ) {
         event.isTransmitting = true;
         __disable_irq();
@@ -276,11 +270,13 @@ void Serial3Event::serial_dma_flush( void ) {
     // wait for any remainding dma transfers to complete
     int head = event.txHead;
     int tail = event.txTail;
+    raise_priority( );
     while ( head != tail ) {
         head = event.txHead;
         tail = event.txTail;
     }
     while ( event.isTransmitting ) ;
+    lower_priority( );
 }
 
 int Serial3Event::serial_dma_available( void ) {

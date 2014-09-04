@@ -50,19 +50,20 @@
 #define unlikely(x)         __builtin_expect(!!(x), 0)
 
 typedef struct __attribute__((packed)) {
-    volatile int term_rx_character;
-    volatile char *term_rx_string;
-    volatile uint32_t txHead;
-    volatile uint32_t txTail;
-    volatile uint32_t rxHead;
-    volatile uint32_t rxTail;
-    volatile uintptr_t* currentptr_rx;
-    volatile uintptr_t* zeroptr_rx;
-    volatile uint8_t* transmit_pin;
-    volatile uint16_t TX_BUFFER_SIZE;
-    volatile uint16_t RX_BUFFER_SIZE;
-    volatile boolean isTransmitting;
-    volatile uint32_t bufTotalSize;
+    volatile int        term_rx_character;
+    volatile char       *term_rx_string;
+    volatile uint32_t   txHead;
+    volatile uint32_t   txTail;
+    volatile uint32_t   rxHead;
+    volatile uint32_t   rxTail;
+    volatile uintptr_t  *currentptr_rx;
+    volatile uintptr_t  *zeroptr_rx;
+    volatile uint8_t    *transmit_pin;
+    volatile uint16_t   TX_BUFFER_SIZE;
+    volatile uint16_t   RX_BUFFER_SIZE;
+    volatile boolean    isTransmitting;
+    volatile uint32_t   bufTotalSize;
+    volatile int16_t    priority;
 } event_params_t;
 
 // ------------------------------Serial1---------------------------------

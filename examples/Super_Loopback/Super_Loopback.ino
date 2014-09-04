@@ -23,7 +23,7 @@ void setup() {
   while(!Serial);
   delay(100);
   //---------------------------------------------------------------------------------------
-  // Must declare TX buffer size in bytes, this must be as big as your largest packet
+  // Must declare TX buffer size in bytes
   SERIAL1_MEMORY_TX(TX_BUFFER_SIZE);
   // Must declare RX buffer size in bytes, will fire when buffer is full or term if declared
   SERIAL1_MEMORY_RX(RX_BUFFER_SIZE);
@@ -33,25 +33,25 @@ void setup() {
   Event1.rxTermCharacter = '\n'; // RX termination character
   Event1.begin(9600);// start Serial1
   //---------------------------------------------------------------------------------------
-  // Must declare TX buffer size in bytes, this must be as big as your largest packet
+  // Must declare TX buffer size in bytes
   SERIAL2_MEMORY_TX(TX_BUFFER_SIZE);
   // Must declare RX buffer size in bytes, will fire when buffer is full or term if declared
   SERIAL2_MEMORY_RX(RX_BUFFER_SIZE);
   Event2.loopBack = true;// internal loopback set / "default = false"
-  Event2.txEventHandler = tx2Event;// event handler Serial1 TX
-  Event2.rxEventHandler = rx2Event;// event handler Serial1 RX
+  Event2.txEventHandler = tx2Event;// event handler Serial2 TX
+  Event2.rxEventHandler = rx2Event;// event handler Serial2 RX
   Event2.rxTermCharacter = '\n'; // RX termination character
   Event2.begin(9600);// start Serial2
   //---------------------------------------------------------------------------------------
-  // Must declare TX buffer size in bytes, this must be as big as your largest packet
+  // Must declare TX buffer size in bytes
   SERIAL3_MEMORY_TX(TX_BUFFER_SIZE);
   // Must declare RX buffer size in bytes, will fire when buffer is full or term if declared
   SERIAL3_MEMORY_RX(RX_BUFFER_SIZE);
   Event3.loopBack = true;// internal loopback set / "default = false"
-  Event3.txEventHandler = tx3Event;// event handler Serial1 TX
-  Event3.rxEventHandler = rx3Event;// event handler Serial1 RX
+  Event3.txEventHandler = tx3Event;// event handler Serial3 TX
+  Event3.rxEventHandler = rx3Event;// event handler Serial3 RX
   Event3.rxTermCharacter = '\n'; // RX termination character
-  Event3.begin(9600);// start Serial2
+  Event3.begin(9600);// start Serial3
   //---------------------------------------------------------------------------------------
 }
 
@@ -64,33 +64,33 @@ void loop() {
 
 //--------------------------------------Serial1 Events----------------------------------
 void tx1Event(void) {
-  // TX Event function will fired when the DMA is finished sending a packet
+  // TX Event function will be fired when the DMA is finished sending a packet
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 }
 
 void rx1Event(void) {
-  // RX Event fired and now we will print to Serial2
+  // RX Event fired, now we will print to Serial2
   Event2.printf("%s", Event1.rxBuffer);
 }
 //--------------------------------------Serial2 Events----------------------------------
 void tx2Event(void) {
-  // TX Event function will fired when the DMA is finished sending a packet
+  // TX Event function will be fired when the DMA is finished sending a packet
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 }
 
 void rx2Event(void) {
-  // RX Event fired and now we will print to Serial3
+  // RX Event fired, now we will print to Serial3
   Event2.printf("%s", Event1.rxBuffer);
 
 }
 //--------------------------------------Serial3 Events----------------------------------
 void tx3Event(void) {
-  // TX Event function will fired when the DMA is finished sending a packet
+  // TX Event function will be fired when the DMA is finished sending a packet
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 }
 
 void rx3Event(void) {
-  // RX Event fired now print to serial monitor
+  // RX Event fired, now print to serial monitor
   Serial.printf("%s", Event3.rxBuffer);
 
 }

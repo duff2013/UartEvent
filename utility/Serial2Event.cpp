@@ -123,7 +123,7 @@ void Serial2Event::serial_dma_begin( uint32_t divisor ) {
     tx.interruptAtCompletion( );
     tx.disableOnCompletion( );
     //tx.interruptAtHalf( );
-    tx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART2_TX );
+    tx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART1_TX );
     //int sync_address = ( int )&txBuffer[0] - ( int )tx.TCD->SADDR;
     //Serial.printf("SADDR: %p | txBuffer: %p | sync_address: %X\n\n", tx.TCD->SADDR, &txBuffer[0], sync_address);
     /****************************************************************
@@ -144,7 +144,7 @@ void Serial2Event::serial_dma_begin( uint32_t divisor ) {
     rx.attachInterrupt( serial_dma_rx_isr );
     rx.interruptAtCompletion( );
     rx.triggerContinuously( );
-    rx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART2_RX );
+    rx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART1_RX );
     rx.enable( );
 }
 

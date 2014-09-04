@@ -88,7 +88,7 @@ typedef struct __attribute__((packed)) {
 // ------------------------------Serial3---------------------------------
 #define SERIAL3_MEMORY_TX(num) ({                                        \
     DMAMEM static uint8_t __attribute__((aligned(num))) buffer_tx3[num]; \
-    Serial1Event::initialize_tx_memory(buffer_tx3, num);                 \
+    Serial3Event::initialize_tx_memory(buffer_tx3, num);                 \
 })
 
 #define SERIAL3_MEMORY_RX(num) ({                                        \

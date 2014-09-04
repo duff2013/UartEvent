@@ -75,7 +75,6 @@ void rx1Event(void) {
 //--------------------------------------Serial2 Events----------------------------------
 void tx2Event(void) {
   // TX Event function will be fired when the DMA is finished sending a packet
-  digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 }
 
 void rx2Event(void) {

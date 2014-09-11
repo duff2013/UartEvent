@@ -34,10 +34,14 @@
 #define SerialEvent_h
 #ifdef __cplusplus
 
+
+
 #include "Arduino.h"
 #include "DMAChannel.h"
 #include "utility/Utils.h"
 #include "utility/memcpy.h"
+
+#if defined(__MK20DX256__)
 //---------------------------------------Serial1Event----------------------------------------
 class Serial1Event : public Stream {
 private:
@@ -66,19 +70,19 @@ private:
     int serial_dma_peek( void );
     void serial_dma_clear( void );
     
-    static inline void raise_priority( void ) {
+    inline static void raise_priority( void ) {
         int priority = nvic_execution_priority();
         if (priority <= event.priority) {
-            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + tx.channel, priority - 16);
-            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + rx.channel, priority - 16);
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + tx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + rx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
         }
     }
     
-    static inline void lower_priority( void ) {
+    inline static void lower_priority( void ) {
         int priority = nvic_execution_priority();
         if (priority <= event.priority) {
-            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + tx.channel, event.priority);
-            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + rx.channel, event.priority);
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + tx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + rx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
         }
     }
 public:
@@ -170,19 +174,19 @@ private:
     int serial_dma_peek( void );
     void serial_dma_clear( void );
     
-    static inline void raise_priority( void ) {
+    inline static void raise_priority( void ) {
         int priority = nvic_execution_priority();
         if (priority <= event.priority) {
-            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + tx.channel, priority - 16);
-            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + rx.channel, priority - 16);
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + tx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + rx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
         }
     }
     
-    static inline void lower_priority( void ) {
+    inline static void lower_priority( void ) {
         int priority = nvic_execution_priority();
         if (priority <= event.priority) {
-            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + tx.channel, event.priority);
-            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + rx.channel, event.priority);
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + tx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + rx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
         }
     }
 public:
@@ -274,19 +278,19 @@ private:
     int serial_dma_peek( void );
     void serial_dma_clear( void );
     
-    static inline void raise_priority( void ) {
+    inline static void raise_priority( void ) {
         int priority = nvic_execution_priority();
         if (priority <= event.priority) {
-            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + tx.channel, priority - 16);
-            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + rx.channel, priority - 16);
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + tx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + rx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
         }
     }
     
-    static inline void lower_priority( void ) {
+    inline static void lower_priority( void ) {
         int priority = nvic_execution_priority();
         if (priority <= event.priority) {
-            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + tx.channel, event.priority);
-            NVIC_SET_PRIORITY(IRQ_DMA_CH0 + rx.channel, event.priority);
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + tx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + rx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
         }
     }
 public:
@@ -349,7 +353,9 @@ public:
     static volatile uint8_t txUsedMemory;
     static volatile uint8_t rxUsedMemory;
 };
-
+#else
+#error "Teensy 3.1 Only!!!!"
+#endif
 //---------------------------------------------End----------------------------------------------
 #endif  // __cplusplus
 #endif

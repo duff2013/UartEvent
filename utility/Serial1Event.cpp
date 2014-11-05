@@ -39,6 +39,8 @@ volatile uint8_t        Serial1Event::rxUsedMemory;
 volatile unsigned char  *Serial1Event::rxBuffer;
 volatile unsigned char  *Serial1Event::txBuffer;
 volatile uint32_t       Serial1Event::rxBufferSize;
+
+volatile uint32_t       Serial1Event::txBufferFree;
 // -------------------------------------------ISR------------------------------------------
 void Serial1Event::serial_dma_tx_isr( void ) {
     tx.clearInterrupt( );
@@ -62,7 +64,7 @@ void Serial1Event::serial_dma_tx_isr( void ) {
         tx.TCD->CITER = size;
         tx.TCD->BITER = size;
         tx.enable();
-        __enable_irq();
+        __enable_irq( );
     } else {
         event.isTransmitting = false;
         TX_CALLBACK( );
@@ -84,7 +86,7 @@ void Serial1Event::serial_dma_rx_isr( void ) {
             RX_CALLBACK( );
         }
         else { ++byteCount_rx; }
-        event.currentptr_rx = (uintptr_t*)rx.TCD->DADDR;
+        event.currentptr_rx = ( uintptr_t * )rx.TCD->DADDR;
     }
     else {
         RX_CALLBACK( );
@@ -100,8 +102,8 @@ void Serial1Event::serial_dma_begin( uint32_t divisor ) {
     /****************************************************************
      * some code lifted from Teensyduino Core serial1.c
      ****************************************************************/
-    CORE_PIN0_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_PFE | PORT_PCR_MUX(3);
-    CORE_PIN1_CONFIG = PORT_PCR_DSE | PORT_PCR_SRE | PORT_PCR_MUX(3);
+    CORE_PIN0_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_PFE | PORT_PCR_MUX( 3 );
+    CORE_PIN1_CONFIG = PORT_PCR_DSE | PORT_PCR_SRE | PORT_PCR_MUX( 3 );
     UART0_BDH = ( divisor >> 13 ) & 0x1F;
     UART0_BDL = ( divisor >> 5 ) & 0xFF;
     UART0_C4 = divisor & 0x1F;
@@ -117,14 +119,12 @@ void Serial1Event::serial_dma_begin( uint32_t divisor ) {
      * DMA TX setup
      ****************************************************************/
     tx.destination( UART0_D );
-    tx.sourceCircular(txBuffer, event.TX_BUFFER_SIZE);
+    tx.sourceCircular( txBuffer, event.TX_BUFFER_SIZE );
     tx.attachInterrupt( serial_dma_tx_isr );
     tx.interruptAtCompletion( );
     tx.disableOnCompletion( );
     tx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART0_TX );
-    event.priority = NVIC_GET_PRIORITY(IRQ_DMA_CH0 + tx.channel);
-    //int sync_address = ( int )&txBuffer[0] - ( int )tx.TCD->SADDR;
-    //Serial.printf("SADDR: %p | txBuffer: %p | sync_address: %X\n\n", tx.TCD->SADDR, &txBuffer[0], sync_address);
+    event.priority = NVIC_GET_PRIORITY( IRQ_DMA_CH0 + tx.channel );
     /****************************************************************
      * DMA RX setup
      ****************************************************************/
@@ -175,8 +175,8 @@ void Serial1Event::serial_dma_end( void ) {
      * serial1 end, from teensduino core, serial1.c
      ****************************************************************/
     UART0_C2 = 0;
-    CORE_PIN0_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX(1);
-    CORE_PIN1_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX(1);
+    CORE_PIN0_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX( 1 );
+    CORE_PIN1_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX( 1 );
     // clear Serial1 dma enable rx/tx bits
     UART0_C5 = UART_DMA_DISABLE;
     event.txHead = event.txTail = 0;
@@ -184,8 +184,8 @@ void Serial1Event::serial_dma_end( void ) {
 
 void Serial1Event::serial_dma_set_transmit_pin( uint8_t pin ) {
     // TODO: need to update var when finish transmitting serial for RS485
-    pinMode(pin, OUTPUT);
-    digitalWrite(pin, LOW);
+    pinMode( pin, OUTPUT );
+    digitalWrite( pin, LOW );
     event.transmit_pin = portOutputRegister( pin );
 }
 
@@ -197,40 +197,45 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
     int head = event.txHead;
     int tail = event.txTail;
     int next = head + count;
-    event.bufTotalSize += count;
-    
-    if (count > event.TX_BUFFER_SIZE) {
+    int total_size = event.bufTotalSize;
+    total_size += count;
+
+    #if defined( NON_BLOCKING )
+    if ( total_size > event.TX_BUFFER_SIZE ) return;
+    event.bufTotalSize = total_size;
+    #else
+    event.bufTotalSize = total_size;
+    if ( count > event.TX_BUFFER_SIZE ) {
         int bufcount = ( count/event.TX_BUFFER_SIZE );
         int bufremainder = count%event.TX_BUFFER_SIZE;
         int halfbuf = event.TX_BUFFER_SIZE;
-        flush();
+        flush( );
         event.txHead = event.txTail = 0;
         head = 0;
         //TCD->CSR |= DMA_TCD_CSR_INTHALF;
         do {
-            event.isTransmitting = true;
             tx.TCD->SADDR = &txBuffer[0];
             memcpy_fast( txBuffer, buf+head, event.TX_BUFFER_SIZE );
             event.isTransmitting = true;
-            __disable_irq();
+            __disable_irq( );
             tx.TCD->CITER = event.TX_BUFFER_SIZE;
             tx.TCD->BITER = event.TX_BUFFER_SIZE;
             tx.enable();
-            __enable_irq();
+            __enable_irq( );
             head += event.TX_BUFFER_SIZE;
             flush();
-        } while (--bufcount);
+        } while ( --bufcount );
         event.txHead = bufremainder;
         if (bufremainder) {
             tx.TCD->SADDR = &txBuffer[0];
             memcpy_fast( txBuffer, buf+head, bufremainder );
             event.isTransmitting = true;
-            __disable_irq();
+            __disable_irq( );
             tx.TCD->CITER = bufremainder;
             tx.TCD->BITER = bufremainder;
             tx.enable();
-            __enable_irq();
-            flush();
+            __enable_irq( );
+            flush( );
         }
         tx.TCD->SADDR = &txBuffer[0];
         event.bufTotalSize = 0;
@@ -239,7 +244,8 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
     }
     
     if (event.bufTotalSize > event.TX_BUFFER_SIZE) flush();
-
+    #endif
+    
     bool bufwrap = next >= event.TX_BUFFER_SIZE ? true : false;
     if ( bufwrap ) {
         
@@ -250,7 +256,6 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
         head = over;
     }
     else {
-        
         memcpy_fast( txBuffer+head, buf, count );
         head += count;
     }
@@ -258,11 +263,11 @@ void Serial1Event::serial_dma_write( const void *buf, unsigned int count ) {
     
     if ( !event.isTransmitting ) {
         event.isTransmitting = true;
-        __disable_irq();
+        __disable_irq( );
         tx.TCD->CITER = count;
         tx.TCD->BITER = count;
-        tx.enable();
-        __enable_irq();
+        tx.enable( );
+        __enable_irq( );
     }
 }
 
@@ -272,10 +277,11 @@ void Serial1Event::serial_dma_flush( void ) {
     int tail = event.txTail;
     raise_priority( );
     while ( head != tail ) {
+        yield( );
         head = event.txHead;
         tail = event.txTail;
     }
-    while ( event.isTransmitting ) ;
+    while ( event.isTransmitting ) yield( );
     lower_priority( );
 }
 
@@ -306,5 +312,5 @@ int Serial1Event::serial_dma_peek( void ) {
 }
 
 void Serial1Event::serial_dma_clear( void ) {
-    
+    // TODO:
 }

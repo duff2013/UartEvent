@@ -34,14 +34,17 @@
 #define SerialEvent_h
 #ifdef __cplusplus
 
+#if
+#if(!defined(__arm__) && defined(TEENSYDUINO) && defined(__MK20DX256__))
+#error "Teensy 3.1 Only!!!!"
+#endif
 
+//#define NON_BLOCKING
 
 #include "Arduino.h"
 #include "DMAChannel.h"
 #include "utility/Utils.h"
 #include "utility/memcpy.h"
-
-#if defined(__MK20DX256__)
 //---------------------------------------Serial1Event----------------------------------------
 class Serial1Event : public Stream {
 private:
@@ -81,8 +84,8 @@ private:
     inline static void lower_priority( void ) {
         int priority = nvic_execution_priority();
         if (priority <= event.priority) {
-            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + tx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
-            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + rx.channel, (priority - 16) >= 0 ? priority - 16 : 0 );
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + tx.channel, event.priority );
+            NVIC_SET_PRIORITY( IRQ_DMA_CH0 + rx.channel, event.priority );
         }
     }
 public:
@@ -95,10 +98,7 @@ public:
     {
         event = { -1, NULL, 0, 0, 0, 0, nullptr, nullptr, nullptr, 0, 0, false, 0 };
     }
-    virtual void begin( uint32_t baud, uint32_t format ) {
-        serial_dma_format( format );
-        serial_dma_begin( BAUD2DIV( baud ) );
-    }
+    virtual void begin( uint32_t baud, uint32_t format ) { serial_dma_format( format ); serial_dma_begin( BAUD2DIV( baud ) ); }
     virtual void begin( uint32_t baud )           { serial_dma_begin( BAUD2DIV( baud ) ); }
     virtual void end( void )                      { serial_dma_end(); }
     virtual void transmitterEnable( uint8_t pin ) { serial_dma_set_transmit_pin( pin ); }
@@ -142,6 +142,7 @@ public:
     bool half;
     static volatile unsigned char* rxBuffer;
     static volatile uint32_t rxBufferSize;
+    static volatile uint32_t txBufferFree;
     static volatile uint8_t txUsedMemory;
     static volatile uint8_t rxUsedMemory;
 };
@@ -353,9 +354,6 @@ public:
     static volatile uint8_t txUsedMemory;
     static volatile uint8_t rxUsedMemory;
 };
-#else
-#error "Teensy 3.1 Only!!!!"
-#endif
 //---------------------------------------------End----------------------------------------------
 #endif  // __cplusplus
 #endif

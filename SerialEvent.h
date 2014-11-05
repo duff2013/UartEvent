@@ -34,8 +34,7 @@
 #define SerialEvent_h
 #ifdef __cplusplus
 
-#if
-#if(!defined(__arm__) && defined(TEENSYDUINO) && defined(__MK20DX256__))
+#if(!defined(__arm__) || !defined(TEENSYDUINO) || !defined(__MK20DX256__))
 #error "Teensy 3.1 Only!!!!"
 #endif
 

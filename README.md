@@ -5,9 +5,6 @@ SerialEvent
 
 <h4>This library is only intended for Teensy 3.1 Hardware Serial since it has enough DMA channels for all 3 serial ports. While you can use it with the Teensy 3.0 the limited memory and DMA channels make it more suited for the Teensy3.1. This is not for use with the USB Serial.</h4>
 
-<h4>Disclaimer!!!</h4>
-><b>This is only a beta release and will only work with the latest PJRC core on github. Once 1.20RC3 is released I will remove this.</b><br>
-
 SerialEvents use DMA for transferring and Receiving data in the "background" making a full-duplex serial communications more possible. By using the DMA to handle the serial i/o you can lesson the load on the Teensy while sending and receiving. This library intends to hand over more control to the user by using Events which give you more flexibility.
 Events that are supported currently are:<br>
 1.  Receive Buffer Full<br>

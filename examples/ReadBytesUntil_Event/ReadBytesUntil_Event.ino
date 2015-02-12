@@ -3,6 +3,9 @@
  * event where it will fire the RX event handler when
  * a termination character is detected or the buffer
  * is full.
+ * Open a serial monitor and type into it and end your
+ * command with a line feed, "return" or carriage
+ * return, "enter".
  *
  * By using the loopback feature we can test
  * the sending and receiving without having to connect

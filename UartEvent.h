@@ -117,10 +117,10 @@ public:
     virtual void   clear            ( void )            { serial_dma_clear( ); }
     virtual int    availableForWrite( void )            { return serial_dma_write_buffer_free( ); }
     virtual size_t write            ( uint8_t c )       { serial_dma_putchar( c ); }
-    virtual size_t write            ( unsigned long n ) { return write( (uint8_t)n ); }
-    virtual size_t write            ( long n )          { return write( (uint8_t)n ); }
-    virtual size_t write            ( unsigned int n )  { return write( (uint8_t)n ); }
-    virtual size_t write            ( int n )           { return write( (uint8_t)n ); }
+    virtual size_t write            ( unsigned long n ) { return write( ( uint8_t )n ); }
+    virtual size_t write            ( long n )          { return write( ( uint8_t )n ); }
+    virtual size_t write            ( unsigned int n )  { return write( ( uint8_t )n ); }
+    virtual size_t write            ( int n )           { return write( ( uint8_t )n ); }
     virtual size_t write9bit        ( uint32_t c )      {  }
     
     virtual size_t write( const uint8_t *buffer, size_t size ) {
@@ -202,10 +202,10 @@ public:
     virtual void   clear            ( void )            { serial_dma_clear( ); }
     virtual int    availableForWrite( void )            { return serial_dma_write_buffer_free( ); }
     virtual size_t write            ( uint8_t c )       { serial_dma_putchar( c ); }
-    virtual size_t write            ( unsigned long n ) { return write( (uint8_t)n ); }
-    virtual size_t write            ( long n )          { return write( (uint8_t)n ); }
-    virtual size_t write            ( unsigned int n )  { return write( (uint8_t)n ); }
-    virtual size_t write            ( int n )           { return write( (uint8_t)n ); }
+    virtual size_t write            ( unsigned long n ) { return write( ( uint8_t )n ); }
+    virtual size_t write            ( long n )          { return write( ( uint8_t )n ); }
+    virtual size_t write            ( unsigned int n )  { return write( ( uint8_t )n ); }
+    virtual size_t write            ( int n )           { return write( ( uint8_t )n ); }
     virtual size_t write9bit        ( uint32_t c )      {  }
     
     virtual size_t write( const uint8_t *buffer, size_t size ) {
@@ -287,10 +287,10 @@ public:
     virtual void   clear            ( void )            { serial_dma_clear( ); }
     virtual int    availableForWrite( void )            { return serial_dma_write_buffer_free( ); }
     virtual size_t write            ( uint8_t c )       { serial_dma_putchar( c ); }
-    virtual size_t write            ( unsigned long n ) { return write( (uint8_t)n ); }
-    virtual size_t write            ( long n )          { return write( (uint8_t)n ); }
-    virtual size_t write            ( unsigned int n )  { return write( (uint8_t)n ); }
-    virtual size_t write            ( int n )           { return write( (uint8_t)n ); }
+    virtual size_t write            ( unsigned long n ) { return write( ( uint8_t )n ); }
+    virtual size_t write            ( long n )          { return write( ( uint8_t )n ); }
+    virtual size_t write            ( unsigned int n )  { return write( ( uint8_t )n ); }
+    virtual size_t write            ( int n )           { return write( ( uint8_t )n ); }
     virtual size_t write9bit        ( uint32_t c )      {  }
     
     virtual size_t write( const uint8_t *buffer, size_t size ) {

@@ -22,7 +22,7 @@ elapsedMicros time = 0;         // Time keeper
 double avg_event1_micro_time;   // Event1 micro time from elapsedMicros
 double avg_serial1_micro_time;  // Serial1 micro time from elapsedMicros
 
-const int LoopCount = 64;       // How many times to loop through the inner loop
+const int LoopCount = 4096;       // How many times to loop through the inner loop
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);

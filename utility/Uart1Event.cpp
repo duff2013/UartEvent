@@ -31,8 +31,8 @@
 ////////////////////////////////////////////////////////////////
 // Tunable parameters (relatively safe to edit these numbers)
 ////////////////////////////////////////////////////////////////
-#define TX_BUFFER_SIZE TX1_BUFFER_SIZE // number of outgoing bytes to buffer
-#define RX_BUFFER_SIZE RX1_BUFFER_SIZE // number of incoming bytes to buffer
+#define TX_BUFFER_SIZE TX0_BUFFER_SIZE // number of outgoing bytes to buffer
+#define RX_BUFFER_SIZE RX0_BUFFER_SIZE // number of incoming bytes to buffer
 //#define IRQ_PRIORITY  64  // 0 = highest priority, 255 = lowest
 ////////////////////////////////////////////////////////////////
 // changes not recommended below this point....

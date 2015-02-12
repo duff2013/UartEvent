@@ -57,8 +57,8 @@
  *******************************************************************/
 
 #define LITTLE_ENDIAN
-#define INDEXED_COPY
-//#define PRE_INC_PTRS
+//#define INDEXED_COPY
+#define PRE_INC_PTRS
 
 /********************************************************************
  ** Includes for size_t definition
@@ -310,9 +310,9 @@ typedef UInt32              UIntN;
  **           No overlap check is performed.
  **
  *******************************************************************/
-
-void *memcpy_fast(volatile void *dest, const void *src, size_t count)
-{
+//static inline
+//__attribute__((always_inline, unused))
+void *memcpy_fast(volatile void *dest, const void *src, size_t count) {
     UInt8* dst8 = (UInt8*)dest;
     UInt8* src8 = (UInt8*)src;
 

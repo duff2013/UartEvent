@@ -1,34 +1,30 @@
 /*****************************************************
- * This SerialEvent example shows the simple use of
- * polling to receive data using Serial1 port. While 
- * this example does not do anything special but use 
+ * This UartEvent example shows the simple use of
+ * polling to receive data using Serial1 port. While
+ * this example does not do anything special but use
  * the traditional polling methods.
  *****************************************************/
-#include <SerialEvent.h>
+#include <UartEvent.h>
 
-Serial1Event pollEvent;
-
-#define TX_BUFFER_SIZE 64
-#define RX_BUFFER_SIZE 64
+Uart1Event pollEvent;
 
 void setup() {
-  pinMode(LED_BUILTIN, OUTPUT);
-  /****************************************************
-   * The following is the minmum that must be defined
-   * for this SerialEvent library to work.
-   ****************************************************/
-  // Must declare TX buffer size in bytes, this must be as big as your largest packet
-  SERIAL1_MEMORY_TX(TX_BUFFER_SIZE);
-  // Must declare RX buffer size in bytes, will fire when buffer is full or term if declared
-  SERIAL1_MEMORY_RX(RX_BUFFER_SIZE);
-  // start SerialEvent using Hardware Serial1
-  pollEvent.begin(9600);
+    pinMode(LED_BUILTIN, OUTPUT);
+    //--------------------------pollEvent Configuration-----------------------------------
+    pollEvent.loopBack = true;// internal loopback set / "default = false"
+    pollEvent.begin(9600);
+    //------------------------------------------------------------------------------------
 }
 
 void loop() {
-  if(pollEvent.available()) {
-    char c = pollEvent.read();
-    Serial.print(c);
-    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-  }
+    if (Serial.available()) {
+        char c = Serial.read();
+        pollEvent.print(c);
+    }
+    
+    if(pollEvent.available()) {
+        char c = pollEvent.read();
+        Serial.print(c);
+        digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    }
 }

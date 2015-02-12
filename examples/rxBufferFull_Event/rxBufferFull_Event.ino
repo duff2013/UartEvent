@@ -1,41 +1,45 @@
 /*****************************************************
- * This SerialEvent example shows the "RX Buffer Full"
+ * This UartEvent example shows the "RX Buffer Full"
  * event where it will fire the RX event handler when
- * the buffer is full. The library  allows you to
- * assign your buffer to whatever size you want.
+ * the buffer is full.
  *
  * By using the loopback feature we can test the 
  * sending and receiving without having to connect
  * up anything. If you want to disable this feature
  * comment it out.
  *****************************************************/
-#include <SerialEvent.h>
+#include <UartEvent.h>
 
-Serial1Event Event1;
+Uart1Event Event1;
+volatile bool print_flag = false;// flag to indicate rx buffer full
 
-#define TX_BUFFER_SIZE 128
-#define RX_BUFFER_SIZE 8
+const uint16_t BUFSIZE = Event1.rxBufferSize;// size of internal buffer
+char buffer[BUFSIZE+1];// user variable to hold incoming data
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     Serial.begin(0);
     while(!Serial);
-//------------------------------------------------------------------------------------
-    // Must declare TX buffer size in bytes, this must be as big as your largest packet
-    SERIAL1_MEMORY_TX(TX_BUFFER_SIZE);
-    // Must declare RX buffer size in bytes, will fire when buffer is full or term if declared
-    SERIAL1_MEMORY_RX(RX_BUFFER_SIZE);
+//--------------------------Uart1Event Configuration--------------------------------
     Event1.loopBack = true;// internal loopback set / "default = false"
     Event1.txEventHandler = tx1Event;// event handler Serial1 TX
     Event1.rxEventHandler = rx1Event;// event handler Serial1 RX
     Event1.begin(9600);// start serial port
-//------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------
+    Serial.print("Event1 Recieving (RX) Buffer Size -> ");
+    Serial.println(Event1.rxBufferSize);// print the size of the internal RX buffer
+    delay(1000);
 }
 
 void loop() {
     if (Serial.available()) {
         char c = Serial.read();
         Event1.print(c);
+    }
+    
+    if (print_flag) {
+        Serial.print(buffer);
+        print_flag = false;
     }
 }
 
@@ -46,6 +50,9 @@ void tx1Event(void) {
 
 void rx1Event(void) {
     // RX Event function prints the buffer when it is full
-    Serial.printf("Buffer Full Event: %s\n", Event1.rxBuffer);
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    int x = 0;
+    while(Event1.available()) buffer[x++] = Event1.read();
+    buffer[x] = 0;
+    print_flag = true;
 }

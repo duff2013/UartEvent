@@ -1,7 +1,7 @@
 /*
  ||
- || @file 	Utils.h
- || @version 	4
+ || @file 	    Utils.h
+ || @version 	6
  || @author 	Colin Duffy
  || @contact 	cmduffy@engr.psu.edu
  ||
@@ -41,7 +41,7 @@
 #define UART_C5_TDMAS       (uint8_t)0x80
 #define UART_C5_RDMAS       (uint8_t)0x20
 
-#define C2_ENABLE           UART_C2_TE | UART_C2_RE | UART_C2_RIE | UART_C2_TIE
+#define C2_ENABLE           UART_C2_TE | UART_C2_RE | UART_C2_RIE | UART_C2_TIE | UART_C2_ILIE
 #define C2_TX_ACTIVE		C2_ENABLE | UART_C2_TIE
 #define C2_TX_COMPLETING	C2_ENABLE | UART_C2_TCIE
 #define C2_TX_INACTIVE		C2_ENABLE
@@ -52,49 +52,7 @@
 typedef struct __attribute__((packed)) {
     volatile int        term_rx_character;
     volatile char       *term_rx_string;
-    volatile uint32_t   txHead;
-    volatile uint32_t   txTail;
-    volatile uint32_t   rxHead;
-    volatile uint32_t   rxTail;
     volatile uintptr_t  *currentptr_rx;
-    volatile uintptr_t  *zeroptr_rx;
-    volatile uint8_t    *transmit_pin;
-    volatile uint16_t   TX_BUFFER_SIZE;
-    volatile uint16_t   RX_BUFFER_SIZE;
-    volatile boolean    isTransmitting;
-    volatile uint32_t   bufTotalSize;
     volatile int16_t    priority;
-} event_params_t;
-
-// ------------------------------Serial1---------------------------------
-#define SERIAL1_MEMORY_TX(num) ({                                        \
-    DMAMEM static uint8_t __attribute__((aligned(num))) buffer_tx1[num]; \
-    Serial1Event::initialize_tx_memory(buffer_tx1, num);                 \
-})
-
-#define SERIAL1_MEMORY_RX(num) ({                                        \
-    DMAMEM static uint8_t buffer_rx1[num+1];                             \
-    Serial1Event::initialize_rx_memory(buffer_rx1, num);                 \
-})
-// ------------------------------Serial2---------------------------------
-#define SERIAL2_MEMORY_TX(num) ({                                        \
-    DMAMEM static uint8_t __attribute__((aligned(num))) buffer_tx2[num]; \
-    Serial2Event::initialize_tx_memory(buffer_tx2, num);                 \
-})
-
-#define SERIAL2_MEMORY_RX(num) ({                                        \
-    DMAMEM static uint8_t buffer_rx2[num+1];                             \
-    Serial2Event::initialize_rx_memory(buffer_rx2, num);                 \
-})
-// ------------------------------Serial3---------------------------------
-#define SERIAL3_MEMORY_TX(num) ({                                        \
-    DMAMEM static uint8_t __attribute__((aligned(num))) buffer_tx3[num]; \
-    Serial3Event::initialize_tx_memory(buffer_tx3, num);                 \
-})
-
-#define SERIAL3_MEMORY_RX(num) ({                                        \
-    DMAMEM static uint8_t buffer_rx3[num+1];                             \
-    Serial3Event::initialize_rx_memory(buffer_rx3, num);                 \
-})
-
+} event_t;
 #endif

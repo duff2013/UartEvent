@@ -56,7 +56,8 @@
 extern "C" {
 #endif
 
-void *memcpy_fast(volatile void *dest, const void *src, size_t count);
+    //static inline
+    FASTRUN void *memcpy_fast(volatile void *dest, const void *src, size_t count);
 
 #ifdef __cplusplus
 }

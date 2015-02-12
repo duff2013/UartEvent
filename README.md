@@ -1,11 +1,14 @@
-SerialEvent
+UartEvent
 =========
+<h3>Teensy 3.1 UartEvent Library V6</h3>
 
-<h3>Teensy 3.1 SerialEvent Library V5</h3>
+
+<h4>Major update to the formerly SerialEvent library. I changed the name to not be confused with Teensyduino serialEvent. Lots of internal chages where made to how the DMA is configuring the internal RXTX buffers and most importantly how the size of these buffers are changed. No longer can you declare the size of the buffer in the sketch it has been moved to the UartEvent.h file. This is do to alignment of the buffer was doubling the reported ram usage. While it was not noticable for small buffer sizes, once it got to about 1024 bytes it would start to explode. Also these buffer sizes have to be a power of 2.</h4>
+
 
 <h4>This library is only intended for Teensy 3.1 Hardware Serial since it has enough DMA channels for all 3 serial ports. While you can use it with the Teensy 3.0 the limited memory and DMA channels make it more suited for the Teensy3.1. This is not for use with the USB Serial.</h4>
 
-SerialEvents use DMA for transferring and Receiving data in the "background" making a full-duplex serial communications more possible. By using the DMA to handle the serial i/o you can lesson the load on the Teensy while sending and receiving. This library intends to hand over more control to the user by using Events which give you more flexibility.
+UartEvents use DMA for transferring and Receiving data in the "background" making a full-duplex serial communications more possible. By using the DMA to handle the serial i/o you can lesson the load on the Teensy while sending and receiving. This library intends to hand over more control to the user by using Events which give you more flexibility.
 Events that are supported currently are:<br>
 1.  Receive Buffer Full<br>
 2.  Read Bytes Until<br>
@@ -16,7 +19,7 @@ Events that are supported currently are:<br>
 > This library allows you to declare how much memory for transmitting and receiving data. Rx and TX memory is just an uint8_t array buffer. RX memory is can be any size while TX memory has to be a power of two.<br>
 
 <b>Transmitting:</b><br>
-> While traditional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine, SerialEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the base class is "Stream" most of the normal print statements work as you would expect. A couple of caveats need to be expressed now.<br>
+> While traditional sending of serial data is byte by byte based this uses a packet based sending. By using the Teensy's DMA engine, UartEvent allows the user to send data and move on very quickly, thus freeing up CPU overhead. Since the base class is "Stream" most of the normal print statements work as you would expect. A couple of caveats need to be expressed now.<br>
 The reason the library use this setup, it allows you to just copy the data to its buffers and move on, not having to wait for each character to send. This makes it somewhat none blocking. The biggest overhead in sending is only just coping data to the transmit buffer.<br>
 
 <b>Receiving:</b><br>

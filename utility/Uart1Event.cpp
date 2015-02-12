@@ -24,6 +24,7 @@
  */
 
 #include "UartEvent.h"
+#include "utility/memcpy.h"
 
 #define SCGC4_UART0_BIT     10
 
@@ -154,7 +155,7 @@ void Uart1Event::serial_dma_begin( uint32_t divisor ) {
     UART0_BDH = ( divisor >> 13 ) & 0x1F;
     UART0_BDL = ( divisor >> 5 ) & 0xFF;
     UART0_C4 = divisor & 0x1F;
-    UART0_C1 = UART_C1_ILT;
+    UART0_C1 = 0;//UART_C1_ILT;
     // TODO: Use UART0 fifo with dma
     UART0_TWFIFO = 2; // tx watermark, causes C5_TDMAS DMA request
     UART0_RWFIFO = 1; // rx watermark, causes C5_RDMAS DMA request

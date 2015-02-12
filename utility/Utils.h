@@ -10,7 +10,7 @@
  || #
  ||
  || @license
- || | Copyright (c) 2014 Colin Duffy
+ || | Copyright (c) 2015 Colin Duffy
  || | This library is free software; you can redistribute it and/or
  || | modify it under the terms of the GNU Lesser General Public
  || | License as published by the Free Software Foundation; version
@@ -41,7 +41,7 @@
 #define UART_C5_TDMAS       (uint8_t)0x80
 #define UART_C5_RDMAS       (uint8_t)0x20
 
-#define C2_ENABLE           UART_C2_TE | UART_C2_RE | UART_C2_RIE | UART_C2_TIE | UART_C2_ILIE
+#define C2_ENABLE           UART_C2_TE | UART_C2_RE | UART_C2_RIE | UART_C2_TIE
 #define C2_TX_ACTIVE		C2_ENABLE | UART_C2_TIE
 #define C2_TX_COMPLETING	C2_ENABLE | UART_C2_TCIE
 #define C2_TX_INACTIVE		C2_ENABLE

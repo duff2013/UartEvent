@@ -44,14 +44,14 @@
 ////////////////////////////////////////////////////////////////
 // Tunable parameters (relatively safe to edit these numbers)
 ////////////////////////////////////////////////////////////////
-#define TX0_BUFFER_SIZE 64 // Serial1 outgoing buffer size, must be power of 2
-#define RX0_BUFFER_SIZE 64 // Serial1 incoming buffer size, must be power of 2
+#define TX0_BUFFER_SIZE 64 // Uart1 outgoing buffer size, must be power of 2
+#define RX0_BUFFER_SIZE 64 // Uart1 incoming buffer size, must be power of 2
 
-#define TX1_BUFFER_SIZE 64 // Serial2 outgoing buffer size, must be power of 2
-#define RX1_BUFFER_SIZE 64 // Serial2 incoming buffer size, must be power of 2
+#define TX1_BUFFER_SIZE 64 // Uart2 outgoing buffer size, must be power of 2
+#define RX1_BUFFER_SIZE 64 // Uart2 incoming buffer size, must be power of 2
 
-#define TX2_BUFFER_SIZE 64 // Serial3 outgoing buffer size, must be power of 2
-#define RX2_BUFFER_SIZE 64 // Serial3 incoming buffer size, must be power of 2
+#define TX2_BUFFER_SIZE 64 // Uart3 outgoing buffer size, must be power of 2
+#define RX2_BUFFER_SIZE 64 // Uart3 incoming buffer size, must be power of 2
 ////////////////////////////////////////////////////////////////
 // changes not recommended below this point....
 ////////////////////////////////////////////////////////////////

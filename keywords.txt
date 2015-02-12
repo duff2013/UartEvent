@@ -15,8 +15,8 @@ Uart3Event	KEYWORD1
 loopBack	KEYWORD2
 txEventHandler	KEYWORD2
 rxEventHandler	KEYWORD2
-rxBufferSize    KEYWORD2
-txBufferSize    KEYWORD2
+rxBufferSize	KEYWORD2
+txBufferSize	KEYWORD2
 rxTermCharacter	KEYWORD2
 rxTermString    KEYWORD2
 #######################################

@@ -29,13 +29,11 @@
 #define SCGC4_UART0_BIT     10
 
 ////////////////////////////////////////////////////////////////
-// Tunable parameters (relatively safe to edit these numbers)
 ////////////////////////////////////////////////////////////////
 #define TX_BUFFER_SIZE TX0_BUFFER_SIZE // number of outgoing bytes to buffer
 #define RX_BUFFER_SIZE RX0_BUFFER_SIZE // number of incoming bytes to buffer
 //#define IRQ_PRIORITY  64  // 0 = highest priority, 255 = lowest
 ////////////////////////////////////////////////////////////////
-// changes not recommended below this point....
 ////////////////////////////////////////////////////////////////
 
 #ifdef SERIAL_9BIT_SUPPORT
@@ -109,18 +107,6 @@ void Uart1Event::serial_dma_rx_isr( void ) {
     uint8_t avail, c;
     uint32_t head, newhead, tail, n;
     
-    if (UART0_S1 & (UART_S1_RDRF | UART_S1_IDLE)) {
-        
-        __disable_irq();
-        avail = UART0_RCFIFO;
-        if (avail == 0) {
-            c = UART0_D;
-            UART0_CFIFO = UART_CFIFO_RXFLUSH;
-            __enable_irq();
-        }
-        else { __enable_irq(); }
-    }
-    
     if ( event.term_rx_character != -1 ) {
         static uint32_t byteCount_rx = 1;
         if (( ( uint8_t )*event.currentptr_rx == event.term_rx_character ) || ( byteCount_rx == RX_BUFFER_SIZE ) ) {
@@ -141,7 +127,6 @@ void Uart1Event::serial_dma_rx_isr( void ) {
         rxEventHandler( );
         BUFFER_FULL = false;
     }
-    //
 }
 // -------------------------------------------CODE------------------------------------------
 void Uart1Event::serial_dma_begin( uint32_t divisor ) {

@@ -29,13 +29,11 @@
 #define SCGC4_UART2_BIT     12
 
 ////////////////////////////////////////////////////////////////
-// Tunable parameters (relatively safe to edit these numbers)
 ////////////////////////////////////////////////////////////////
 #define TX_BUFFER_SIZE TX2_BUFFER_SIZE // number of outgoing bytes to buffer
 #define RX_BUFFER_SIZE RX2_BUFFER_SIZE // number of incoming bytes to buffer
 //#define IRQ_PRIORITY  64  // 0 = highest priority, 255 = lowest
 ////////////////////////////////////////////////////////////////
-// changes not recommended below this point....
 ////////////////////////////////////////////////////////////////
 
 #ifdef SERIAL_9BIT_SUPPORT
@@ -108,18 +106,6 @@ void Uart3Event::serial_dma_rx_isr( void ) {
     rx.clearInterrupt( );
     uint8_t avail, c;
     uint32_t head, newhead, tail, n;
-    
-    if (UART2_S1 & (UART_S1_RDRF | UART_S1_IDLE)) {
-        
-        __disable_irq();
-        avail = UART2_RCFIFO;
-        if (avail == 0) {
-            c = UART2_D;
-            UART2_CFIFO = UART_CFIFO_RXFLUSH;
-            __enable_irq();
-        }
-        else { __enable_irq(); }
-    }
     
     if ( event.term_rx_character != -1 ) {
         static uint32_t byteCount_rx = 1;

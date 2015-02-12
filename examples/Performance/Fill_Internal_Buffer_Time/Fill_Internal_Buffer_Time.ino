@@ -8,18 +8,21 @@
  *****************************************************/
 
 #include <UartEvent.h>
-#include "monroe.h"
 
 Uart1Event Event1;
 
 // size of internal buffer defaults to the same as Serial1 (64 bytes)
-const uint16_t BUFSIZE = Event1.rxBufferSize;
+const uint16_t BUFSIZE = Event1.txBufferSize;
 uint8_t PACKET[BUFSIZE+1];
-uint8_t PACKET_SIZE = 16;
-elapsedMicros time = 0;      // Time keeper
-float avg_event1_micro_time; // Event1 micro time from elapsedMicros
-float avg_serial1_micro_time;// Serial1 micro time from elapsedMicros
-const int LoopCount = 8192;        // How many times to loop through the inner loop
+
+const uint16_t INC_VAL = 16;    // Value to add to 'write' size
+uint16_t PACKET_SIZE = INC_VAL; // size of sent packet
+
+elapsedMicros time = 0;         // Time keeper
+double avg_event1_micro_time;   // Event1 micro time from elapsedMicros
+double avg_serial1_micro_time;  // Serial1 micro time from elapsedMicros
+
+const int LoopCount = 64;       // How many times to loop through the inner loop
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
@@ -29,16 +32,16 @@ void setup() {
     //--------------------------UartEvent1 Configuration-----------------------------------
     //Event1.txEventHandler = tx1Event;// event handler Serial1 TX
     //-------------------------------------------------------------------------------------
-    Serial.print("Event1 Recieving (RX) Buffer Size -> ");
+    Serial.print("Event1 Recieving (TX) Buffer Size -> ");
     Serial.println(BUFSIZE);// print the size of the internal RX buffer
     Serial.println("--------------------------------------------");
     delay(1000);
 }
 
 void loop() {
-    if(PACKET_SIZE > BUFSIZE) PACKET_SIZE = 16;
+    if(PACKET_SIZE > BUFSIZE) PACKET_SIZE = INC_VAL;
     memset(PACKET, 'A', PACKET_SIZE);
-    //----------------------Serial1 Event Performance in a loop------------------------
+    //------------------------Event1 Performance in a loop-----------------------------
     Event1.begin(1000000);// start Event1
     Serial.print("Starting Speed Comparison Test Event1  ");
     delay(200);
@@ -76,22 +79,22 @@ void loop() {
     }
     else diff = 0;
     
-    delay(50);
+    delay(30);
     Serial.println("\n*************** STATS ***************");
-    delay(50);
+    delay(30);
     Serial.printf("Loop Count:                      %i\n", LoopCount);
-    delay(50);
+    delay(30);
     Serial.printf("Bytes Sent Per loop:             %i\n", PACKET_SIZE);
-    delay(50);
+    delay(30);
     Serial.printf("Event1  Avg Copy to Buffer Time: %f microseconds\n", avg_event1_micro_time);
-    delay(50);
+    delay(30);
     Serial.printf("Serial1 Avg Copy to Buffer Time: %f microseconds\n", avg_serial1_micro_time);
-    delay(50);
+    delay(30);
     Serial.printf("Difference:                      %f microseconds\n", diff);
-    delay(50);
+    delay(30);
     Serial.println("--------------------------------------------------------------");
-    delay(1000);
-    PACKET_SIZE += 16;
+    delay(500);
+    PACKET_SIZE += INC_VAL;
 }
 
 //--------------------------------------Serial1 Events----------------------------------
@@ -99,14 +102,3 @@ void tx1Event(void) {
     // TX Event function will fired when the DMA is finished sending a packet
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 }
-
-
-
-
-
-
-
-
-
-
-

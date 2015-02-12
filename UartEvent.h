@@ -222,8 +222,8 @@ public:
     bool loopBack;
     static ISR txEventHandler;
     static ISR rxEventHandler;
-    static const uint32_t txBufferSize = TX0_BUFFER_SIZE;
-    static const uint32_t rxBufferSize = RX0_BUFFER_SIZE;
+    static const uint32_t txBufferSize = TX1_BUFFER_SIZE;
+    static const uint32_t rxBufferSize = RX1_BUFFER_SIZE;
 };
 //---------------------------------------Uart3Event----------------------------------------
 class Uart3Event : public Stream {
@@ -307,8 +307,8 @@ public:
     bool loopBack;
     static ISR txEventHandler;
     static ISR rxEventHandler;
-    static const uint32_t txBufferSize = TX0_BUFFER_SIZE;
-    static const uint32_t rxBufferSize = RX0_BUFFER_SIZE;
+    static const uint32_t txBufferSize = TX2_BUFFER_SIZE;
+    static const uint32_t rxBufferSize = RX2_BUFFER_SIZE;
 };
 //---------------------------------------------End----------------------------------------------
 #endif  // __cplusplus

@@ -1,7 +1,8 @@
 UartEvent
 =========
-<h3>Teensy 3.1 UartEvent Library V6</h3>
+<h3>Teensy 3.1 UartEvent Library V6.1</h3>
 
+<h4>Update -> (3/24/15) Fix for RX buffer size of 1</h4>
 
 <h4>Update to the formerly SerialEvent library. I changed the name to not be confused with Teensyduino serialEvent. Lots of internal changes where made to how the DMA is configuring the internal RXTX buffers and most importantly how the size of these buffers are changed. No longer can you declare the size of the buffer in the sketch it has been moved to the UartEvent.h file. This is do to alignment of the buffer was doubling the reported ram usage. While it was not noticeable for small buffer sizes, once it got to about 1024 bytes it would start to explode. Also these buffer sizes have to be a power of 2.</h4>
 

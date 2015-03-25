@@ -1,7 +1,7 @@
 /*
  ||
  || @file       UartEvent.h
- || @version 	6
+ || @version 	6.1
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  ||
@@ -61,6 +61,7 @@ private:
     static event_t event;
     static DMAChannel tx;
     static DMAChannel rx;
+    static DMASetting rx2;
     typedef void ( * ISR ) ( void );
     static void serial_dma_tx_isr( void ) ;
     static void serial_dma_rx_isr( void ) ;
@@ -116,12 +117,12 @@ public:
     virtual void   flush            ( void )            { serial_dma_flush( ); }
     virtual void   clear            ( void )            { serial_dma_clear( ); }
     virtual int    availableForWrite( void )            { return serial_dma_write_buffer_free( ); }
-    virtual size_t write            ( uint8_t c )       { serial_dma_putchar( c ); }
+    virtual size_t write            ( uint8_t c )       { serial_dma_putchar( c ); return 1; }
     virtual size_t write            ( unsigned long n ) { return write( ( uint8_t )n ); }
     virtual size_t write            ( long n )          { return write( ( uint8_t )n ); }
     virtual size_t write            ( unsigned int n )  { return write( ( uint8_t )n ); }
     virtual size_t write            ( int n )           { return write( ( uint8_t )n ); }
-    virtual size_t write9bit        ( uint32_t c )      {  }
+    virtual size_t write9bit        ( uint32_t c )      {  return 0; }
     
     virtual size_t write( const uint8_t *buffer, size_t size ) {
         serial_dma_write( buffer, size );
@@ -146,6 +147,7 @@ private:
     static event_t event;
     static DMAChannel tx;
     static DMAChannel rx;
+    //static DMASetting rx2;
     typedef void ( * ISR ) ( void );
     static void serial_dma_tx_isr( void ) ;
     static void serial_dma_rx_isr( void ) ;
@@ -201,12 +203,12 @@ public:
     virtual void   flush            ( void )            { serial_dma_flush( ); }
     virtual void   clear            ( void )            { serial_dma_clear( ); }
     virtual int    availableForWrite( void )            { return serial_dma_write_buffer_free( ); }
-    virtual size_t write            ( uint8_t c )       { serial_dma_putchar( c ); }
+    virtual size_t write            ( uint8_t c )       { serial_dma_putchar( c ); return 1; }
     virtual size_t write            ( unsigned long n ) { return write( ( uint8_t )n ); }
     virtual size_t write            ( long n )          { return write( ( uint8_t )n ); }
     virtual size_t write            ( unsigned int n )  { return write( ( uint8_t )n ); }
     virtual size_t write            ( int n )           { return write( ( uint8_t )n ); }
-    virtual size_t write9bit        ( uint32_t c )      {  }
+    virtual size_t write9bit        ( uint32_t c )      {  return 0; }
     
     virtual size_t write( const uint8_t *buffer, size_t size ) {
         serial_dma_write( buffer, size );
@@ -286,12 +288,12 @@ public:
     virtual void   flush            ( void )            { serial_dma_flush( ); }
     virtual void   clear            ( void )            { serial_dma_clear( ); }
     virtual int    availableForWrite( void )            { return serial_dma_write_buffer_free( ); }
-    virtual size_t write            ( uint8_t c )       { serial_dma_putchar( c ); }
+    virtual size_t write            ( uint8_t c )       { serial_dma_putchar( c ); return 1; }
     virtual size_t write            ( unsigned long n ) { return write( ( uint8_t )n ); }
     virtual size_t write            ( long n )          { return write( ( uint8_t )n ); }
     virtual size_t write            ( unsigned int n )  { return write( ( uint8_t )n ); }
     virtual size_t write            ( int n )           { return write( ( uint8_t )n ); }
-    virtual size_t write9bit        ( uint32_t c )      {  }
+    virtual size_t write9bit        ( uint32_t c )      {  return 0; }
     
     virtual size_t write( const uint8_t *buffer, size_t size ) {
         serial_dma_write( buffer, size );

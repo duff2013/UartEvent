@@ -104,8 +104,6 @@ void Uart3Event::serial_dma_tx_isr( void ) {
 
 void Uart3Event::serial_dma_rx_isr( void ) {
     rx.clearInterrupt( );
-    uint8_t avail, c;
-    uint32_t head, newhead, tail, n;
     
     if ( event.term_rx_character != -1 ) {
         static uint32_t byteCount_rx = 1;
@@ -123,8 +121,9 @@ void Uart3Event::serial_dma_rx_isr( void ) {
     }
     else {
         BUFFER_FULL = true;
-        rx_buffer_head = rx_buffer_tail = 0;
         rxEventHandler( );
+        rx_buffer_head = rx_buffer_tail = 0;
+        if ( RX2_BUFFER_SIZE == 1 ) rx.destinationCircular( rx_buffer, 1 );
         BUFFER_FULL = false;
     }
     //
@@ -222,6 +221,7 @@ void Uart3Event::serial_dma_putchar( uint32_t c ) {
 }
 
 void Uart3Event::serial_dma_write( const void *buf, unsigned int count ) {
+    uint8_t * buffer = ( uint8_t * )buf;
     uint32_t head = tx_buffer_head;
     uint32_t tail = tx_buffer_tail;
     uint32_t next = head + count;
@@ -235,12 +235,12 @@ void Uart3Event::serial_dma_write( const void *buf, unsigned int count ) {
     if ( bufwrap ) {
         uint32_t over = next - TX_BUFFER_SIZE;
         uint32_t under = TX_BUFFER_SIZE - head;
-        memcpy_fast( tx_buffer+head, buf, under );
-        memcpy_fast( tx_buffer, buf+under, over );
+        memcpy_fast( tx_buffer+head, buffer, under );
+        memcpy_fast( tx_buffer, buffer+under, over );
         head = over;
     }
     else {
-        memcpy_fast( tx_buffer+head, buf, count );
+        memcpy_fast( tx_buffer+head, buffer, count );
         head += cnt;
     }
     
@@ -321,5 +321,6 @@ int Uart3Event::serial_dma_peek( void ) {
 }
 
 void Uart3Event::serial_dma_clear( void ) {
+    rx.destinationCircular( rx_buffer, RX2_BUFFER_SIZE );
     rx_buffer_head = rx_buffer_tail;
 }

@@ -1,7 +1,7 @@
 /*
  ||
  || @file       Uart1Event.cpp
- || @version 	6
+ || @version 	6.1
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  || @license
@@ -46,6 +46,7 @@ static uint8_t use9Bits = 0;
 
 DMAMEM static volatile BUFTYPE __attribute__((aligned(TX_BUFFER_SIZE))) tx_buffer[TX_BUFFER_SIZE];
 DMAMEM static volatile BUFTYPE __attribute__((aligned(RX_BUFFER_SIZE))) rx_buffer[RX_BUFFER_SIZE];
+DMAMEM static volatile BUFTYPE __attribute__((aligned(RX_BUFFER_SIZE))) rx2_buffer[RX_BUFFER_SIZE];
 
 #if TX_BUFFER_SIZE > 255
 static volatile uint16_t tx_buffer_head = 0;
@@ -69,6 +70,8 @@ static volatile uint8_t BUFFER_FULL   = false;
 event_t           Uart1Event::event;
 DMAChannel        Uart1Event::tx;
 DMAChannel        Uart1Event::rx;
+DMASetting        Uart1Event::rx2;
+static volatile uint8_t who = 0;
 Uart1Event::ISR Uart1Event::txEventHandler;
 Uart1Event::ISR Uart1Event::rxEventHandler;
 // -------------------------------------------ISR------------------------------------------
@@ -104,8 +107,6 @@ void Uart1Event::serial_dma_tx_isr( void ) {
 
 void Uart1Event::serial_dma_rx_isr( void ) {
     rx.clearInterrupt( );
-    uint8_t avail, c;
-    uint32_t head, newhead, tail, n;
     
     if ( event.term_rx_character != -1 ) {
         static uint32_t byteCount_rx = 1;
@@ -123,8 +124,9 @@ void Uart1Event::serial_dma_rx_isr( void ) {
     }
     else {
         BUFFER_FULL = true;
-        rx_buffer_head = rx_buffer_tail = 0;
         rxEventHandler( );
+        rx_buffer_head = rx_buffer_tail = 0;
+        if ( RX0_BUFFER_SIZE == 1 ) rx.destinationCircular( rx_buffer, 1 );
         BUFFER_FULL = false;
     }
 }
@@ -161,18 +163,24 @@ void Uart1Event::serial_dma_begin( uint32_t divisor ) {
     /****************************************************************
      * DMA RX setup
      ****************************************************************/
-    if ( rxTermCharacter == -1 && rxTermString == NULL ) {
-        rx.destinationCircular( rx_buffer, RX_BUFFER_SIZE );
-    }
-    else {
-        rx.destinationCircular( rx_buffer, 1 );
-        event.term_rx_character = rxTermCharacter;
-    }
     rx.source( UART0_D );
     rx.attachInterrupt( serial_dma_rx_isr );
     rx.interruptAtCompletion( );
     rx.triggerContinuously( );
     rx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART0_RX );
+    rx2 = rx;
+    
+    if ( rxTermCharacter == -1 && rxTermString == NULL ) {
+        rx.destinationCircular( rx_buffer, RX_BUFFER_SIZE );
+    }
+    else {
+        rx.destinationCircular( rx_buffer, 1 );
+        //rx2.destinationCircular( rx2_buffer, 1 );
+        //rx.replaceSettingsOnCompletion(rx2);
+        //rx2.replaceSettingsOnCompletion(rx);
+        event.term_rx_character = rxTermCharacter;
+    }
+
     rx.enable( );
     for (int i = 0; i < RX_BUFFER_SIZE; i++) rx_buffer[i] = 0;
     for (int i = 0; i < TX_BUFFER_SIZE; i++) tx_buffer[i] = 0;
@@ -225,11 +233,12 @@ void Uart1Event::serial_dma_putchar( uint32_t c ) {
 }
 
 void Uart1Event::serial_dma_write( const void *buf, unsigned int count ) {
+    uint8_t * buffer = ( uint8_t * )buf;
     uint32_t head = tx_buffer_head;
-    uint32_t tail = tx_buffer_tail;
+    //uint32_t tail = tx_buffer_tail;
     uint32_t next = head + count;
     
-    uint32_t free_buffer = serial_dma_write_buffer_free( );
+    //uint32_t free_buffer = serial_dma_write_buffer_free( );
     uint32_t cnt = count;
     
     if ( cnt > TX_BUFFER_SIZE ) return;
@@ -238,12 +247,12 @@ void Uart1Event::serial_dma_write( const void *buf, unsigned int count ) {
     if ( bufwrap ) {
         uint32_t over = next - TX_BUFFER_SIZE;
         uint32_t under = TX_BUFFER_SIZE - head;
-        memcpy_fast( tx_buffer+head, buf, under );
-        memcpy_fast( tx_buffer, buf+under, over );
+        memcpy_fast( tx_buffer+head, buffer, under );
+        memcpy_fast( tx_buffer, buffer+under, over );
         head = over;
     }
     else {
-        memcpy_fast( tx_buffer+head, buf, count );
+        memcpy_fast( tx_buffer+head, buffer, count );
         head += cnt;
     }
     
@@ -302,6 +311,8 @@ int Uart1Event::serial_dma_getchar( void ) {
         head = rx_buffer_head;
         tail = rx_buffer_tail;
         c = rx_buffer[tail];
+        ELINKNO = rx.TCD->CITER_ELINKNO;
+        //Serial.printf("1 ELINKNO: %02i | HEAD: %02i | TAIL: %02i | C: %02X\n", ELINKNO, head, tail, c);
         if ( ++tail > RX_BUFFER_SIZE ) tail = 0;
         
     } else {
@@ -309,6 +320,7 @@ int Uart1Event::serial_dma_getchar( void ) {
         head = RX_BUFFER_SIZE - ELINKNO;
         tail = rx_buffer_tail;
         c = rx_buffer[tail];
+        //Serial.printf("2 ELINKNO: %02i | HEAD: %02i | TAIL: %02i | C: %02X\n", ELINKNO, head, tail, c);
         if ( head == tail ) return -1;
         if ( ++tail >= RX_BUFFER_SIZE ) tail = 0;
     }
@@ -324,5 +336,6 @@ int Uart1Event::serial_dma_peek( void ) {
 }
 
 void Uart1Event::serial_dma_clear( void ) {
-    rx_buffer_head = rx_buffer_tail;
+    rx.destinationCircular( rx_buffer, RX0_BUFFER_SIZE );
+    rx_buffer_head = rx_buffer_tail = 0;
 }

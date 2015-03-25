@@ -13,17 +13,15 @@ Uart1Event Event1;
 Uart2Event Event2;
 Uart2Event Event3;
 
-volatile bool print_flag = false;// flag to indicate rx buffer full
-
+volatile bool print_flag = false;            // flag to indicate rx buffer full
 const uint16_t BUFSIZE = Event1.rxBufferSize;// size of internal buffer
-char buffer[BUFSIZE+10];// user variable to hold incoming data
-
-int count = 7360/BUFSIZE;
+char buffer[BUFSIZE + 1];                    // user variable to hold incoming data
+int pak_count = 5824 / BUFSIZE;              // number of packets to send
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     Serial.begin(0);
-    while(!Serial);
+    while (!Serial);
     delay(1000);
     //---------------------------------------------------------------------------------------
     Event1.loopBack = true;          // internal loopback set / "default = false"
@@ -46,11 +44,11 @@ void setup() {
 }
 
 void loop() {
-    for (int i = 0; i < count; i++) {
+    for (int i = 0; i < pak_count; i++) {
         // write a part of monroe data
-        Event1.write(monroe+(BUFSIZE*i), BUFSIZE);
+        Event1.write(monroe + (BUFSIZE * i), BUFSIZE);
         // wait for rxEventHandler to fire
-        while(!print_flag);
+        while (!print_flag);
         // print buffer copied from rxEventHandler
         Serial.print(buffer);
         // reset print flag
@@ -68,7 +66,7 @@ void tx1Event(void) {
 void rx1Event(void) {
     // RX Event fired, now we will print to Uart2
     int x = 0;
-    while(Event1.available()) buffer[x++] = Event1.read();
+    while (Event1.available()) buffer[x++] = Event1.read();
     buffer[x] = 0;
     Event2.write((uint8_t*)buffer, BUFSIZE);
 }
@@ -81,7 +79,7 @@ void tx2Event(void) {
 void rx2Event(void) {
     // RX Event fired, now we will print to Uart3
     int x = 0;
-    while(Event2.available()) buffer[x++] = Event2.read();
+    while (Event2.available()) buffer[x++] = Event2.read();
     buffer[x] = 0;
     Event3.write((uint8_t*)buffer, BUFSIZE);
 }
@@ -95,11 +93,10 @@ void rx3Event(void) {
     // RX Event fired, now print to serial monitor
     digitalWriteFast(LED_BUILTIN, !digitalReadFast(LED_BUILTIN));
     int x = 0;
-    while(Event3.available()) buffer[x++] = Event3.read();
+    while (Event3.available()) buffer[x++] = Event3.read();
     buffer[x] = 0;
     print_flag = true;
 }
-
 
 
 

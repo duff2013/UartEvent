@@ -18,7 +18,6 @@ rxEventHandler	KEYWORD2
 rxBufferSize	KEYWORD2
 txBufferSize	KEYWORD2
 rxTermCharacter	KEYWORD2
-rxTermString    KEYWORD2
 #######################################
 # Instances (KEYWORD2)
 #######################################

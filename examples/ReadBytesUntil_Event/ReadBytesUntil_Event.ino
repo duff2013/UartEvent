@@ -32,7 +32,7 @@ void setup() {
     Event1.begin(9600);               // start serial port
     //------------------------------------------------------------------------------------
     delay(1000);
-    Serial.println("TX event will fire when termination character is detected");
+    Serial.println("RX event will fire when termination character is detected");
 }
 
 void loop() {

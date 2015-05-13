@@ -1,7 +1,7 @@
 /*
  ||
  || @file       Uart1Event.cpp
- || @version 	6.1
+ || @version 	6.2
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  || @license
@@ -32,7 +32,7 @@
 ////////////////////////////////////////////////////////////////
 #define TX_BUFFER_SIZE TX0_BUFFER_SIZE // number of outgoing bytes to buffer
 #define RX_BUFFER_SIZE RX0_BUFFER_SIZE // number of incoming bytes to buffer
-//#define IRQ_PRIORITY  64  // 0 = highest priority, 255 = lowest
+#define IRQ_PRIORITY  64  // 0 = highest priority, 255 = lowest
 ////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 
@@ -46,7 +46,6 @@ static uint8_t use9Bits = 0;
 
 DMAMEM static volatile BUFTYPE __attribute__((aligned(TX_BUFFER_SIZE))) tx_buffer[TX_BUFFER_SIZE];
 DMAMEM static volatile BUFTYPE __attribute__((aligned(RX_BUFFER_SIZE))) rx_buffer[RX_BUFFER_SIZE];
-DMAMEM static volatile BUFTYPE __attribute__((aligned(RX_BUFFER_SIZE))) rx2_buffer[RX_BUFFER_SIZE];
 
 #if TX_BUFFER_SIZE > 255
 static volatile uint16_t tx_buffer_head = 0;
@@ -56,24 +55,28 @@ static volatile uint8_t tx_buffer_head  = 0;
 static volatile uint8_t tx_buffer_tail  = 0;
 #endif
 #if RX_BUFFER_SIZE > 255
-static volatile uint16_t rx_buffer_head = 0;
-static volatile uint16_t rx_buffer_tail = 0;
+static volatile uint16_t rx_buffer_head  = 0;
+static volatile uint16_t rx_buffer_tail  = 0;
+static volatile uint16_t rx_buffer_count = 0;
 #else
 static volatile uint8_t rx_buffer_head  = 0;
 static volatile uint8_t rx_buffer_tail  = 0;
+static volatile uint8_t rx_buffer_count = 0;
 #endif
 
 static volatile uint8_t transmitting  = 0;
 static volatile uint8_t *transmit_pin = NULL;
 static volatile uint8_t BUFFER_FULL   = false;
 
-event_t           Uart1Event::event;
 DMAChannel        Uart1Event::tx;
 DMAChannel        Uart1Event::rx;
-DMASetting        Uart1Event::rx2;
-static volatile uint8_t who = 0;
 Uart1Event::ISR Uart1Event::txEventHandler;
 Uart1Event::ISR Uart1Event::rxEventHandler;
+
+volatile int16_t  Uart1Event::priority;
+volatile int Uart1Event::rxTermCharacter;
+
+uint32_t *Uart1Event::elink;
 // -------------------------------------------ISR------------------------------------------
 void Uart1Event::serial_dma_tx_isr( void ) {
     tx.clearInterrupt( );
@@ -81,7 +84,7 @@ void Uart1Event::serial_dma_tx_isr( void ) {
     uint32_t head = tx_buffer_head;
     uint32_t tail = tx_buffer_tail;
     uint32_t ELINKNO = tx.TCD->CITER_ELINKNO;
-
+    
     if ( ( tail + ELINKNO ) >= TX_BUFFER_SIZE ) tail += ELINKNO - TX_BUFFER_SIZE;
     else tail += ELINKNO;
     
@@ -102,33 +105,27 @@ void Uart1Event::serial_dma_tx_isr( void ) {
     }
     if ( transmit_pin ) *transmit_pin = 0;
     tx_buffer_tail = tail;
-    //UART0_C2 |= UART_C2_TIE;
+}
+
+void Uart1Event::user_isr( void ) {
+    rxEventHandler( );
 }
 
 void Uart1Event::serial_dma_rx_isr( void ) {
+    //digitalWriteFast(14, HIGH);
     rx.clearInterrupt( );
-    
-    if ( event.term_rx_character != -1 ) {
-        static uint32_t byteCount_rx = 1;
-        if (( ( uint8_t )*event.currentptr_rx == event.term_rx_character ) || ( byteCount_rx == RX_BUFFER_SIZE ) ) {
-            event.currentptr_rx = ( uintptr_t * )rx.destinationAddress( );
-            *event.currentptr_rx = 0;
-            rx.destinationCircular( rx_buffer, 1 );
-            rxEventHandler( );
-            byteCount_rx = 1;
-            rx_buffer_head = rx_buffer_tail = 0;
-        }
-        else {
-            ++byteCount_rx;
-            event.currentptr_rx = ( uintptr_t * )rx.destinationAddress( );        }
-    }
-    else {
-        BUFFER_FULL = true;
-        rxEventHandler( );
-        rx_buffer_head = rx_buffer_tail = 0;
-        if ( RX0_BUFFER_SIZE == 1 ) rx.destinationCircular( rx_buffer, 1 );
-        BUFFER_FULL = false;
-    }
+    uint32_t head;
+    int term;
+    head = rx_buffer_head;
+    head = ( head + 1 )&( RX_BUFFER_SIZE - 1 );
+    rx_buffer_head = head;
+    term = rxTermCharacter;
+    if ( term != -1 ) {
+        char current = rx_buffer[head];
+        if ( current == term ) NVIC_SET_PENDING( IRQ_UART0_STATUS );
+    } else NVIC_SET_PENDING( IRQ_UART0_STATUS );
+    *elink = 1;
+    //digitalWriteFast(14, LOW);
 }
 // -------------------------------------------CODE------------------------------------------
 void Uart1Event::serial_dma_begin( uint32_t divisor ) {
@@ -159,31 +156,24 @@ void Uart1Event::serial_dma_begin( uint32_t divisor ) {
     tx.interruptAtCompletion( );
     tx.disableOnCompletion( );
     tx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART0_TX );
-    event.priority = NVIC_GET_PRIORITY( IRQ_DMA_CH0 + tx.channel );
+    NVIC_SET_PRIORITY( IRQ_DMA_CH0 + tx.channel, IRQ_PRIORITY );
+    priority = NVIC_GET_PRIORITY( IRQ_DMA_CH0 + tx.channel );
     /****************************************************************
      * DMA RX setup
      ****************************************************************/
     rx.source( UART0_D );
+    rx.destinationCircular( rx_buffer+1, RX_BUFFER_SIZE );
     rx.attachInterrupt( serial_dma_rx_isr );
     rx.interruptAtCompletion( );
     rx.triggerContinuously( );
     rx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART0_RX );
-    rx2 = rx;
-    
-    if ( rxTermCharacter == -1 && rxTermString == NULL ) {
-        rx.destinationCircular( rx_buffer, RX_BUFFER_SIZE );
-    }
-    else {
-        rx.destinationCircular( rx_buffer, 1 );
-        //rx2.destinationCircular( rx2_buffer, 1 );
-        //rx.replaceSettingsOnCompletion(rx2);
-        //rx2.replaceSettingsOnCompletion(rx);
-        event.term_rx_character = rxTermCharacter;
-    }
-
+    attachInterruptVector( IRQ_UART0_STATUS, user_isr );
+    NVIC_SET_PRIORITY( IRQ_UART0_STATUS, 192 ); // 255 = lowest priority
+    NVIC_ENABLE_IRQ( IRQ_UART0_STATUS );
+    NVIC_SET_PRIORITY( IRQ_DMA_CH0 + rx.channel, IRQ_PRIORITY );
+    elink = ( uint32_t * )&rx.TCD->CITER_ELINKNO;
+    *elink = 1;
     rx.enable( );
-    for (int i = 0; i < RX_BUFFER_SIZE; i++) rx_buffer[i] = 0;
-    for (int i = 0; i < TX_BUFFER_SIZE; i++) tx_buffer[i] = 0;
 }
 
 void Uart1Event::serial_dma_format(uint32_t format) {
@@ -195,19 +185,27 @@ void Uart1Event::serial_dma_format(uint32_t format) {
     c = ( c & ~0x13 ) | ( format & 0x03 );      // configure parity
     if (format & 0x04) c |= 0x10;           // 9 bits (might include parity)
     UART0_C1 = c;
-    if ( ( format & 0x0F ) == 0x04 ) UART0_C3 |= 0x40; // 8N2 is 9 bit with 9th bit always 1
+    if ( ( format & 0x0F ) == 0x04) UART0_C3 |= 0x40; // 8N2 is 9 bit with 9th bit always 1
     c = UART0_S2 & ~0x10;
     if ( format & 0x10 ) c |= 0x10;           // rx invert
     UART0_S2 = c;
     c = UART0_C3 & ~0x10;
     if ( format & 0x20 ) c |= 0x10;           // tx invert
     UART0_C3 = c;
+#ifdef SERIAL_9BIT_SUPPORT
+    c = UART0_C4 & 0x1F;
+    if ( format & 0x08 ) c |= 0x20;           // 9 bit mode with parity (requires 10 bits)
+    UART0_C4 = c;
+    use9Bits = format & 0x80;
+#endif
 }
 
 void Uart1Event::serial_dma_end( void ) {
     if ( !( SIM_SCGC7 & SIM_SCGC7_DMA ) ) return;
     if ( !( SIM_SCGC6 & SIM_SCGC6_DMAMUX ) ) return;
     if ( !( SIM_SCGC4 & SIM_SCGC4_UART0 ) ) return;
+    attachInterruptVector( IRQ_UART0_STATUS, uart0_status_isr );
+    // flush Uart1Event tx buffer
     flush( );
     delay(20);
     /****************************************************************
@@ -216,14 +214,13 @@ void Uart1Event::serial_dma_end( void ) {
     UART0_C2 = 0;
     CORE_PIN0_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX( 1 );
     CORE_PIN1_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX( 1 );
-    // clear Serial1 dma enable rx/tx bits
     UART0_C5 = UART_DMA_DISABLE;
     tx_buffer_head = tx_buffer_tail = 0;
 }
 
 void Uart1Event::serial_dma_set_transmit_pin( uint8_t pin ) {
-    // TODO: need to update var when finish transmitting serial for RS485
-    pinMode( pin, OUTPUT );
+    while ( transmitting ) yield();
+    pinMode( pin, OUTPUT);
     digitalWrite( pin, LOW );
     transmit_pin = portOutputRegister( pin );
 }
@@ -235,14 +232,10 @@ void Uart1Event::serial_dma_putchar( uint32_t c ) {
 void Uart1Event::serial_dma_write( const void *buf, unsigned int count ) {
     uint8_t * buffer = ( uint8_t * )buf;
     uint32_t head = tx_buffer_head;
-    //uint32_t tail = tx_buffer_tail;
-    uint32_t next = head + count;
-    
-    //uint32_t free_buffer = serial_dma_write_buffer_free( );
     uint32_t cnt = count;
-    
-    if ( cnt > TX_BUFFER_SIZE ) return;
-    
+    uint32_t free = serial_dma_write_buffer_free( );
+    if ( cnt > free ) cnt = free;
+    uint32_t next = head + cnt;
     bool bufwrap = next >= TX_BUFFER_SIZE ? true : false;
     if ( bufwrap ) {
         uint32_t over = next - TX_BUFFER_SIZE;
@@ -255,9 +248,7 @@ void Uart1Event::serial_dma_write( const void *buf, unsigned int count ) {
         memcpy_fast( tx_buffer+head, buffer, count );
         head += cnt;
     }
-    
     tx_buffer_head = head;
-    
     if ( !transmitting ) {
         transmitting = true;
         __disable_irq( );
@@ -286,56 +277,39 @@ int Uart1Event::serial_dma_write_buffer_free( void ) {
     uint32_t head, tail;
     head = tx_buffer_head;
     tail = tx_buffer_tail;
-    if (head >= tail) return TX_BUFFER_SIZE - 1 - head + tail;
+    if ( head >= tail ) return TX_BUFFER_SIZE - 1 - head + tail;
     return tail - head - 1;
 }
 
 int Uart1Event::serial_dma_available( void ) {
-    uint32_t head, tail, ELINKNO;
-    if ( BUFFER_FULL ) {
-        head = rx_buffer_head;
-        tail = rx_buffer_tail;
-        return (RX_BUFFER_SIZE) - (tail);
-    }
-    ELINKNO = rx.TCD->CITER_ELINKNO;
-    head = RX_BUFFER_SIZE - ELINKNO;
+    uint32_t head, tail;
+    head = rx_buffer_head;
     tail = rx_buffer_tail;
     if ( head >= tail ) return head - tail;
     return RX_BUFFER_SIZE + head - tail;
 }
 
 int Uart1Event::serial_dma_getchar( void ) {
-    uint32_t head, tail, ELINKNO;
+    uint32_t head, tail;
     int c;
-    if ( BUFFER_FULL ) {
-        head = rx_buffer_head;
-        tail = rx_buffer_tail;
-        c = rx_buffer[tail];
-        ELINKNO = rx.TCD->CITER_ELINKNO;
-        //Serial.printf("1 ELINKNO: %02i | HEAD: %02i | TAIL: %02i | C: %02X\n", ELINKNO, head, tail, c);
-        if ( ++tail > RX_BUFFER_SIZE ) tail = 0;
-        
-    } else {
-        ELINKNO = rx.TCD->CITER_ELINKNO;
-        head = RX_BUFFER_SIZE - ELINKNO;
-        tail = rx_buffer_tail;
-        c = rx_buffer[tail];
-        //Serial.printf("2 ELINKNO: %02i | HEAD: %02i | TAIL: %02i | C: %02X\n", ELINKNO, head, tail, c);
-        if ( head == tail ) return -1;
-        if ( ++tail >= RX_BUFFER_SIZE ) tail = 0;
-    }
+    head = rx_buffer_head;
+    tail = rx_buffer_tail;
+    if ( head == tail ) return -1;
+    tail = ( tail + 1 )&( RX_BUFFER_SIZE - 1 );
+    c = rx_buffer[tail];
     rx_buffer_tail = tail;
     return c;
 }
 
 int Uart1Event::serial_dma_peek( void ) {
-    uint32_t head, ELINKNO;
-    ELINKNO = rx.TCD->CITER_ELINKNO;
-    head = RX_BUFFER_SIZE - ELINKNO;
-    return head;
+    uint32_t head, tail;
+    head = rx_buffer_head;
+    tail = rx_buffer_tail;
+    if ( head == tail ) return -1;
+    tail = ( tail + 1 )&( RX_BUFFER_SIZE - 1 );
+    return rx_buffer[tail];
 }
 
 void Uart1Event::serial_dma_clear( void ) {
-    rx.destinationCircular( rx_buffer, RX0_BUFFER_SIZE );
-    rx_buffer_head = rx_buffer_tail = 0;
+    rx_buffer_tail = rx_buffer_head;
 }

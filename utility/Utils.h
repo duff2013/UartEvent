@@ -1,7 +1,7 @@
 /*
  ||
  || @file 	    Utils.h
- || @version 	6.1
+ || @version 	6.2
  || @author 	Colin Duffy
  || @contact 	cmduffy@engr.psu.edu
  ||
@@ -41,18 +41,11 @@
 #define UART_C5_TDMAS       (uint8_t)0x80
 #define UART_C5_RDMAS       (uint8_t)0x20
 
-#define C2_ENABLE           UART_C2_TE | UART_C2_RE | UART_C2_RIE | UART_C2_TIE
+#define C2_ENABLE           UART_C2_TE | UART_C2_RE | UART_C2_RIE | UART_C2_TIE;// | UART_C2_ILIE
 #define C2_TX_ACTIVE		C2_ENABLE | UART_C2_TIE
 #define C2_TX_COMPLETING	C2_ENABLE | UART_C2_TCIE
 #define C2_TX_INACTIVE		C2_ENABLE
 
 #define likely(x)           __builtin_expect(!!(x), 1)
 #define unlikely(x)         __builtin_expect(!!(x), 0)
-
-typedef struct __attribute__((packed)) {
-    volatile int        term_rx_character;
-    volatile char       *term_rx_string;
-    volatile uintptr_t  *currentptr_rx;
-    volatile int16_t    priority;
-} event_t;
 #endif

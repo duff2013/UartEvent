@@ -313,7 +313,7 @@ typedef UInt32              UIntN;
 //static inline
 //__attribute__((always_inline, unused))
 void *memcpy_fast(volatile void *dest, const void *src, size_t count) {
-    UInt8* dst8 = (UInt8*)dest;
+    volatile UInt8* dst8 = (volatile UInt8*)dest;
     UInt8* src8 = (UInt8*)src;
 
     if (count < 8) {

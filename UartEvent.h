@@ -141,7 +141,7 @@ private:
     static volatile int16_t  priority;
     static DMAChannel tx;
     static DMAChannel rx;
-    static void USER_ISR( void );
+    static void user_isr( void );
     typedef void ( * ISR ) ( void );
     static void serial_dma_tx_isr( void ) ;
     static void serial_dma_rx_isr( void ) ;
@@ -224,7 +224,7 @@ private:
     static volatile int16_t  priority;
     static DMAChannel tx;
     static DMAChannel rx;
-    static void USER_ISR( void );
+    static void user_isr( void );
     typedef void ( * ISR ) ( void );
     static void serial_dma_tx_isr( void ) ;
     static void serial_dma_rx_isr( void ) ;

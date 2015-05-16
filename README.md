@@ -1,6 +1,6 @@
 UartEvent
 =========
-<h3>Teensy 3.1 UartEvent Library V6.2</h3>
+<h3>Teensy 3.1 UartEvent Library v6.2</h3>
 
 <h5>Update -> (4/13/15) Refactored code for more efficient use of the serial DMA. Now functions 'available' and 'read' work interchangeably in the rx event or in user code. This update was due to a bug where reading data from the rx event and polling you had to clear the rx buffer. Now this is not necessary. Buffer full will not now cause an event to trigger, this will be re added in the future. Event callbacks are now called from a low priority isr so it can be preempted by the dma isr. The write function now will truncate packet to the available buffer space at that time if greater than what is available.</h5>
 

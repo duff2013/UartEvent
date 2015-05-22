@@ -1,7 +1,7 @@
 /*
  ||
  || @file       Uart2Event.cpp
- || @version 	6.2
+ || @version 	6.2.1
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  || @license

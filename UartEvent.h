@@ -1,7 +1,7 @@
 /*
  ||
  || @file       UartEvent.h
- || @version 	6.2
+ || @version 	6.2.1
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  ||
@@ -58,11 +58,11 @@ private:
     static volatile int16_t  priority;
     static DMAChannel tx;
     static DMAChannel rx;
-    static void user_isr( void );
-    typedef void ( * ISR ) ( void );
-    static void serial_dma_tx_isr( void ) ;
-    static void serial_dma_rx_isr( void ) ;
-    static void defaultCallback( ) {  }
+    static void user_isr             ( void );
+    typedef void ( * ISR )           ( void );
+    static void serial_dma_tx_isr    ( void ) ;
+    static void serial_dma_rx_isr    ( void ) ;
+    static void defaultCallback      ( void ) {  }
     
     void serial_dma_begin            ( uint32_t divisor );
     void serial_dma_format           ( uint32_t format );
@@ -141,11 +141,11 @@ private:
     static volatile int16_t  priority;
     static DMAChannel tx;
     static DMAChannel rx;
-    static void user_isr( void );
-    typedef void ( * ISR ) ( void );
-    static void serial_dma_tx_isr( void ) ;
-    static void serial_dma_rx_isr( void ) ;
-    static void defaultCallback( ) {  }
+    static void user_isr             ( void );
+    typedef void ( * ISR )           ( void );
+    static void serial_dma_tx_isr    ( void ) ;
+    static void serial_dma_rx_isr    ( void ) ;
+    static void defaultCallback      ( void ) {  }
     
     void serial_dma_begin            ( uint32_t divisor );
     void serial_dma_format           ( uint32_t format );
@@ -224,11 +224,11 @@ private:
     static volatile int16_t  priority;
     static DMAChannel tx;
     static DMAChannel rx;
-    static void user_isr( void );
-    typedef void ( * ISR ) ( void );
-    static void serial_dma_tx_isr( void ) ;
-    static void serial_dma_rx_isr( void ) ;
-    static void defaultCallback( ) {  }
+    static void user_isr             ( void );
+    typedef void ( * ISR )           ( void );
+    static void serial_dma_tx_isr    ( void ) ;
+    static void serial_dma_rx_isr    ( void ) ;
+    static void defaultCallback      ( void ) {  }
     
     void serial_dma_begin            ( uint32_t divisor );
     void serial_dma_format           ( uint32_t format );

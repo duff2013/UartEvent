@@ -1,7 +1,7 @@
 /*
  ||
  || @file       Uart1Event.cpp
- || @version 	6.2
+ || @version 	6.2.1
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  || @license
@@ -236,8 +236,8 @@ void Uart1Event::serial_dma_write( const void *buf, unsigned int count ) {
     uint32_t free = serial_dma_write_buffer_free( );
     if ( cnt > free ) cnt = free;
     uint32_t next = head + cnt;
-    bool bufwrap = next >= TX_BUFFER_SIZE ? true : false;
-    if ( bufwrap ) {
+    bool wrap = next >= TX_BUFFER_SIZE ? true : false;
+    if ( wrap ) {
         uint32_t over = next - TX_BUFFER_SIZE;
         uint32_t under = TX_BUFFER_SIZE - head;
         memcpy_fast( tx_buffer+head, buffer, under );

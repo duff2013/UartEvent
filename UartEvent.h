@@ -1,7 +1,7 @@
 /*
  ||
  || @file       UartEvent.h
- || @version 	6.2.1
+ || @version 	6.3
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  ||
@@ -58,7 +58,8 @@ private:
     static volatile int16_t  priority;
     static DMAChannel tx;
     static DMAChannel rx;
-    static void user_isr             ( void );
+    static void user_isr_rx          ( void );
+    static void user_isr_tx          ( void );
     typedef void ( * ISR )           ( void );
     static void serial_dma_tx_isr    ( void ) ;
     static void serial_dma_rx_isr    ( void ) ;
@@ -94,7 +95,8 @@ private:
     }
 public:
     Uart1Event( ) : loopBack( false ) {
-        rxTermCharacter = -1;
+        rxTermCharacterTrigger = -1;
+        rxBufferSizeTrigger = -1;
         txEventHandler = defaultCallback;
         rxEventHandler = defaultCallback;
     }
@@ -128,7 +130,8 @@ public:
         return len;
     }
     bool loopBack;
-    static volatile int rxTermCharacter;
+    static volatile int rxTermCharacterTrigger;
+    static volatile int rxBufferSizeTrigger;
     static ISR txEventHandler;
     static ISR rxEventHandler;
     static const uint32_t txBufferSize = TX0_BUFFER_SIZE;
@@ -141,7 +144,8 @@ private:
     static volatile int16_t  priority;
     static DMAChannel tx;
     static DMAChannel rx;
-    static void user_isr             ( void );
+    static void user_isr_rx          ( void );
+    static void user_isr_tx          ( void );
     typedef void ( * ISR )           ( void );
     static void serial_dma_tx_isr    ( void ) ;
     static void serial_dma_rx_isr    ( void ) ;
@@ -177,7 +181,8 @@ private:
     }
 public:
     Uart2Event( ) : loopBack( false ) {
-        rxTermCharacter = -1;
+        rxTermCharacterTrigger = -1;
+        rxBufferSizeTrigger = -1;
         txEventHandler = defaultCallback;
         rxEventHandler = defaultCallback;
     }
@@ -211,11 +216,12 @@ public:
         return len;
     }
     bool loopBack;
-    static volatile int rxTermCharacter;
+    static volatile int rxTermCharacterTrigger;
+    static volatile int rxBufferSizeTrigger;
     static ISR txEventHandler;
     static ISR rxEventHandler;
-    static const uint32_t txBufferSize = TX0_BUFFER_SIZE;
-    static const uint32_t rxBufferSize = RX0_BUFFER_SIZE;
+    static const uint32_t txBufferSize = TX1_BUFFER_SIZE;
+    static const uint32_t rxBufferSize = RX1_BUFFER_SIZE;
 };
 //---------------------------------------Uart3Event----------------------------------------
 class Uart3Event : public Stream {
@@ -224,7 +230,8 @@ private:
     static volatile int16_t  priority;
     static DMAChannel tx;
     static DMAChannel rx;
-    static void user_isr             ( void );
+    static void user_isr_rx          ( void );
+    static void user_isr_tx          ( void );
     typedef void ( * ISR )           ( void );
     static void serial_dma_tx_isr    ( void ) ;
     static void serial_dma_rx_isr    ( void ) ;
@@ -260,7 +267,8 @@ private:
     }
 public:
     Uart3Event( ) : loopBack( false ) {
-        rxTermCharacter = -1;
+        rxTermCharacterTrigger = -1;
+        rxBufferSizeTrigger = -1;
         txEventHandler = defaultCallback;
         rxEventHandler = defaultCallback;
     }
@@ -294,11 +302,12 @@ public:
         return len;
     }
     bool loopBack;
-    static volatile int rxTermCharacter;
+    static volatile int rxTermCharacterTrigger;
+    static volatile int rxBufferSizeTrigger;
     static ISR txEventHandler;
     static ISR rxEventHandler;
-    static const uint32_t txBufferSize = TX0_BUFFER_SIZE;
-    static const uint32_t rxBufferSize = RX0_BUFFER_SIZE;
+    static const uint32_t txBufferSize = TX2_BUFFER_SIZE;
+    static const uint32_t rxBufferSize = RX2_BUFFER_SIZE;
 };
 //---------------------------------------------End----------------------------------------------
 #endif  // __cplusplus

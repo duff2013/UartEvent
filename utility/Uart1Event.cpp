@@ -1,7 +1,7 @@
 /*
  ||
  || @file       Uart1Event.cpp
- || @version 	6.2.1
+ || @version 	6.3
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  || @license
@@ -70,14 +70,19 @@ static volatile uint8_t BUFFER_FULL   = false;
 
 DMAChannel        Uart1Event::tx;
 DMAChannel        Uart1Event::rx;
-Uart1Event::ISR Uart1Event::txEventHandler;
-Uart1Event::ISR Uart1Event::rxEventHandler;
+Uart1Event::ISR   Uart1Event::txEventHandler;
+Uart1Event::ISR   Uart1Event::rxEventHandler;
 
 volatile int16_t  Uart1Event::priority;
-volatile int Uart1Event::rxTermCharacter;
+volatile int      Uart1Event::rxTermCharacterTrigger;
+volatile int      Uart1Event::rxBufferSizeTrigger;
 
 uint32_t *Uart1Event::elink;
 // -------------------------------------------ISR------------------------------------------
+void Uart1Event::user_isr_tx( void ) {
+    txEventHandler( );
+}
+
 void Uart1Event::serial_dma_tx_isr( void ) {
     tx.clearInterrupt( );
     
@@ -101,31 +106,49 @@ void Uart1Event::serial_dma_tx_isr( void ) {
         __enable_irq( );
     } else {
         transmitting = false;
-        txEventHandler( );
+        NVIC_SET_PENDING( IRQ_UART0_ERROR );
     }
     if ( transmit_pin ) *transmit_pin = 0;
     tx_buffer_tail = tail;
 }
 
-void Uart1Event::user_isr( void ) {
+void Uart1Event::user_isr_rx( void ) {
     rxEventHandler( );
 }
 
 void Uart1Event::serial_dma_rx_isr( void ) {
-    //digitalWriteFast(14, HIGH);
     rx.clearInterrupt( );
-    uint32_t head;
-    int term;
+    uint32_t head, tail;
+    int term_trigger, size_trigger;
     head = rx_buffer_head;
     head = ( head + 1 )&( RX_BUFFER_SIZE - 1 );
     rx_buffer_head = head;
-    term = rxTermCharacter;
-    if ( term != -1 ) {
+    term_trigger = rxTermCharacterTrigger;
+    size_trigger = rxBufferSizeTrigger;
+    if ( size_trigger != -1 ) {
+        uint16_t bufferFree;
+        tail = rx_buffer_tail;
+        if ( head >= tail ) bufferFree = head - tail;
+        else bufferFree = RX_BUFFER_SIZE + head - tail;
+        if ( bufferFree == size_trigger ) {
+            NVIC_SET_PENDING( IRQ_UART0_STATUS );
+            *elink = 1;
+            return;
+        }
+    }
+    if ( term_trigger != -1 ) {
         char current = rx_buffer[head];
-        if ( current == term ) NVIC_SET_PENDING( IRQ_UART0_STATUS );
-    } else NVIC_SET_PENDING( IRQ_UART0_STATUS );
-    *elink = 1;
-    //digitalWriteFast(14, LOW);
+        if ( current == term_trigger ) {
+            NVIC_SET_PENDING( IRQ_UART0_STATUS );
+        }
+        *elink = 1;
+        return;
+    }
+    else {
+        NVIC_SET_PENDING( IRQ_UART0_STATUS );
+        *elink = 1;
+        return;
+    }
 }
 // -------------------------------------------CODE------------------------------------------
 void Uart1Event::serial_dma_begin( uint32_t divisor ) {
@@ -155,6 +178,9 @@ void Uart1Event::serial_dma_begin( uint32_t divisor ) {
     tx.attachInterrupt( serial_dma_tx_isr );
     tx.interruptAtCompletion( );
     tx.disableOnCompletion( );
+    attachInterruptVector( IRQ_UART0_ERROR, user_isr_tx );
+    NVIC_SET_PRIORITY( IRQ_UART0_ERROR, 192 ); // 255 = lowest priority
+    NVIC_ENABLE_IRQ( IRQ_UART0_ERROR );
     tx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART0_TX );
     NVIC_SET_PRIORITY( IRQ_DMA_CH0 + tx.channel, IRQ_PRIORITY );
     priority = NVIC_GET_PRIORITY( IRQ_DMA_CH0 + tx.channel );
@@ -167,7 +193,7 @@ void Uart1Event::serial_dma_begin( uint32_t divisor ) {
     rx.interruptAtCompletion( );
     rx.triggerContinuously( );
     rx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART0_RX );
-    attachInterruptVector( IRQ_UART0_STATUS, user_isr );
+    attachInterruptVector( IRQ_UART0_STATUS, user_isr_rx );
     NVIC_SET_PRIORITY( IRQ_UART0_STATUS, 192 ); // 255 = lowest priority
     NVIC_ENABLE_IRQ( IRQ_UART0_STATUS );
     NVIC_SET_PRIORITY( IRQ_DMA_CH0 + rx.channel, IRQ_PRIORITY );
@@ -261,16 +287,15 @@ void Uart1Event::serial_dma_write( const void *buf, unsigned int count ) {
 
 void Uart1Event::serial_dma_flush( void ) {
     // wait for any remainding dma transfers to complete
-    int head = tx_buffer_head;
-    int tail = tx_buffer_tail;
-    raise_priority( );
-    while ( head != tail ) {
+    uint16_t head, tail;
+    //raise_priority( );
+    do {
         yield( );
         head = tx_buffer_head;
         tail = tx_buffer_tail;
-    }
+    } while ( head != tail );
     while ( transmitting ) yield( );
-    lower_priority( );
+    //lower_priority( );
 }
 
 int Uart1Event::serial_dma_write_buffer_free( void ) {

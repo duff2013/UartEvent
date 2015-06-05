@@ -1,3 +1,8 @@
+><b>Updated (4/13/15 v6.3)</b><br>
+  * New trigger for incoming data "rxBufferSizeTrigger", you can set a trigger for how of the rx buffer is used.
+  * Renamed rxTermCharacter to rxTermCharacterTrigger.
+  * Users RX/TX callbacks now is called from low priority ISR's'.
+
 ><b>Updated (4/13/15)</b><br>
   * Refactored code for more efficient use of the serial DMA. 
   * Now functions 'available' and 'read' work interchangeably in the rx event or in user code. This update was due to a bug where reading data from the rx event and polling you had to clear the rx buffer. Now this is not necessary. 

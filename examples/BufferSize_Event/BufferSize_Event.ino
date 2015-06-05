@@ -1,23 +1,21 @@
 /*****************************************************
- * This UartEvent example shows the "Read Bytes Until"
+ * This UartEvent example shows the "RX Buffer Size"
  * event where it will fire the RX event handler when
- * a termination character is detected or the buffer
- * is full.
- * Open a serial monitor and type into it and end your
- * command with a line feed.
+ * the buffer is full. You can have any size but it
+ * cannot be greater than the internal buffer size - 1.
  *
- * By using the loopback feature we can test
- * the sending and receiving without having to connect
+ * By using the loopback feature we can test the
+ * sending and receiving without having to connect
  * up anything. If you want to disable this feature
  * comment it out.
  *****************************************************/
 #include <UartEvent.h>
 
 Uart1Event Event1;
-volatile bool print_flag = false;// flag to indicate rx buffer full
+volatile bool print_flag = false;// flag to indicate rx buffer size has been met
 
 const uint16_t BUFSIZE = Event1.rxBufferSize;// size of internal buffer
-char buffer[BUFSIZE + 1]; // user variable to hold incoming data
+char buffer[BUFSIZE]; // user variable to hold incoming data
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
@@ -25,13 +23,14 @@ void setup() {
     while (!Serial);
     delay(100);
     //--------------------------Uart1Event Configuration--------------------------------
-    Event1.loopBack = true;              // internal loopback set / "default = false"
-    Event1.txEventHandler = tx1Event;    // event handler Serial1 TX
-    Event1.rxEventHandler = rx1Event;    // event handler Serial1 RX
-    Event1.rxTermCharacterTrigger = '\n';// this termination character will fire the RX event handler
-    Event1.begin(9600);                  // start serial port
+    Event1.loopBack = true;                   // internal loopback set / "default = false"
+    Event1.txEventHandler = tx1Event;         // event handler Serial1 TX
+    Event1.rxEventHandler = rx1Event;         // event handler Serial1 RX
+    Event1.rxBufferSizeTrigger = BUFSIZE - 1; // set trigger for (buffer size) - 1
+    Event1.begin(9600);                       // start serial port
     //----------------------------------------------------------------------------------
-    Serial.println("RX event will fire when termination character is detected");
+    Serial.print("RX Trigger will fire when this many bytes are avaliable -> ");
+    Serial.println(BUFSIZE - 1); // print the size of the internal RX buffer
 }
 
 void loop() {

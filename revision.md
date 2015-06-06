@@ -1,5 +1,5 @@
 ><b>Updated (4/13/15 v6.3)</b><br>
-  * New trigger for incoming data "rxBufferSizeTrigger", you can set a trigger for how of the rx buffer is used.
+  * New trigger for incoming data "rxBufferSizeTrigger", you can set a trigger for how much of the rx buffer is used before an event is triggered.
   * Renamed rxTermCharacter to rxTermCharacterTrigger.
   * Users RX/TX callbacks now is called from low priority ISR's'.
 

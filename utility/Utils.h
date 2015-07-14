@@ -1,7 +1,7 @@
 /*
  ||
  || @file 	    Utils.h
- || @version 	6.3
+ || @version 	6.4
  || @author 	Colin Duffy
  || @contact 	cmduffy@engr.psu.edu
  ||
@@ -31,8 +31,11 @@
 #ifndef Utils_h
 #define Utils_h
 
-#define BITBAND_ADDR(reg, bit) (((uint32_t)&(reg) - 0x40000000) * 32 + (bit) * 4 + 0x42000000)
-#define BITBAND_U32(reg, bit) (*(uint32_t *)BITBAND_ADDR((reg), (bit)))
+#define BITBAND_REG_ADDR(reg, bit) (((uint32_t)&(reg) - 0x40000000) * 32 + (bit) * 4 + 0x42000000)
+#define BITBAND_REG_U32(reg, bit) (*(uint32_t *)BITBAND_REG_ADDR((reg), (bit)))
+
+#define BITBAND_SRAM_ADDR(reg, bit) (((uint32_t)&(reg) - 0x20000000) * 32 + (bit) * 4 + 0x22000000)
+#define BITBAND_SRAM_U32(reg, bit) (*(uint32_t *)BITBAND_SRAM_ADDR((reg), (bit)))
 
 #define UART_DMA_ENABLE     UART_C5_TDMAS | UART_C5_RDMAS
 #define UART_DMA_DISABLE    0

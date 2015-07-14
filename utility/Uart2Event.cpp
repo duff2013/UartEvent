@@ -1,7 +1,7 @@
 /*
  ||
  || @file       Uart2Event.cpp
- || @version 	6.3
+ || @version 	6.4
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  || @license
@@ -135,6 +135,10 @@ void Uart2Event::serial_dma_rx_isr( void ) {
             *elink = 1;
             return;
         }
+        else if ( term_trigger == -1 ) {
+            *elink = 1;
+            return;
+        }
     }
     if ( term_trigger != -1 ) {
         char current = rx_buffer[head];
@@ -142,18 +146,16 @@ void Uart2Event::serial_dma_rx_isr( void ) {
             NVIC_SET_PENDING( IRQ_UART1_STATUS );
         }
         *elink = 1;
-        return;
     }
     else {
         NVIC_SET_PENDING( IRQ_UART1_STATUS );
         *elink = 1;
-        return;
     }
 }
 // -------------------------------------------CODE------------------------------------------
 void Uart2Event::serial_dma_begin( uint32_t divisor ) {
     // Enable UART1 clock
-    BITBAND_U32( SIM_SCGC4, SCGC4_UART1_BIT ) = 0x01;
+    BITBAND_REG_U32( SIM_SCGC4, SCGC4_UART1_BIT ) = 0x01;
     /****************************************************************
      * some code lifted from Teensyduino Core serial1.c
      ****************************************************************/
@@ -230,7 +232,7 @@ void Uart2Event::serial_dma_end( void ) {
     if ( !( SIM_SCGC7 & SIM_SCGC7_DMA ) ) return;
     if ( !( SIM_SCGC6 & SIM_SCGC6_DMAMUX ) ) return;
     if ( !( SIM_SCGC4 & SIM_SCGC4_UART1 ) ) return;
-    attachInterruptVector( IRQ_UART1_STATUS, uart0_status_isr );
+    attachInterruptVector( IRQ_UART1_STATUS, uart1_status_isr );
     // flush Uart2Event tx buffer
     flush( );
     delay(20);
@@ -262,8 +264,8 @@ void Uart2Event::serial_dma_write( const void *buf, unsigned int count ) {
     uint32_t free = serial_dma_write_buffer_free( );
     if ( cnt > free ) cnt = free;
     uint32_t next = head + cnt;
-    bool bufwrap = next >= TX_BUFFER_SIZE ? true : false;
-    if ( bufwrap ) {
+    bool wrap = next >= TX_BUFFER_SIZE ? true : false;
+    if ( wrap ) {
         uint32_t over = next - TX_BUFFER_SIZE;
         uint32_t under = TX_BUFFER_SIZE - head;
         memcpy_fast( tx_buffer+head, buffer, under );
@@ -287,16 +289,15 @@ void Uart2Event::serial_dma_write( const void *buf, unsigned int count ) {
 
 void Uart2Event::serial_dma_flush( void ) {
     // wait for any remainding dma transfers to complete
-    int head = tx_buffer_head;
-    int tail = tx_buffer_tail;
-    raise_priority( );
-    while ( head != tail ) {
+    uint16_t head, tail;
+    //raise_priority( );
+    do {
         yield( );
         head = tx_buffer_head;
         tail = tx_buffer_tail;
-    }
+    } while ( head != tail );
     while ( transmitting ) yield( );
-    lower_priority( );
+    //lower_priority( );
 }
 
 int Uart2Event::serial_dma_write_buffer_free( void ) {

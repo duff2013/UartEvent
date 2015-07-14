@@ -1,7 +1,7 @@
 /*
  ||
  || @file       UartEvent.h
- || @version 	6.3
+ || @version 	6.4
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  ||

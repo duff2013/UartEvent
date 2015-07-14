@@ -1,7 +1,7 @@
 /*
  ||
  || @file       Uart1Event.cpp
- || @version 	6.3
+ || @version 	6.4
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  || @license
@@ -126,12 +126,17 @@ void Uart1Event::serial_dma_rx_isr( void ) {
     term_trigger = rxTermCharacterTrigger;
     size_trigger = rxBufferSizeTrigger;
     if ( size_trigger != -1 ) {
+        
         uint16_t bufferFree;
         tail = rx_buffer_tail;
         if ( head >= tail ) bufferFree = head - tail;
         else bufferFree = RX_BUFFER_SIZE + head - tail;
-        if ( bufferFree == size_trigger ) {
+        if ( bufferFree >= size_trigger ) {
             NVIC_SET_PENDING( IRQ_UART0_STATUS );
+            *elink = 1;
+            return;
+        }
+        else if ( term_trigger == -1 ) {
             *elink = 1;
             return;
         }
@@ -142,18 +147,16 @@ void Uart1Event::serial_dma_rx_isr( void ) {
             NVIC_SET_PENDING( IRQ_UART0_STATUS );
         }
         *elink = 1;
-        return;
     }
     else {
         NVIC_SET_PENDING( IRQ_UART0_STATUS );
         *elink = 1;
-        return;
     }
 }
 // -------------------------------------------CODE------------------------------------------
 void Uart1Event::serial_dma_begin( uint32_t divisor ) {
     // Enable UART0 clock
-    BITBAND_U32( SIM_SCGC4, SCGC4_UART0_BIT ) = 0x01;
+    BITBAND_REG_U32( SIM_SCGC4, SCGC4_UART0_BIT ) = 0x01;
     /****************************************************************
      * some code lifted from Teensyduino Core serial1.c
      ****************************************************************/
@@ -178,10 +181,10 @@ void Uart1Event::serial_dma_begin( uint32_t divisor ) {
     tx.attachInterrupt( serial_dma_tx_isr );
     tx.interruptAtCompletion( );
     tx.disableOnCompletion( );
+    tx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART0_TX );
     attachInterruptVector( IRQ_UART0_ERROR, user_isr_tx );
     NVIC_SET_PRIORITY( IRQ_UART0_ERROR, 192 ); // 255 = lowest priority
     NVIC_ENABLE_IRQ( IRQ_UART0_ERROR );
-    tx.triggerAtHardwareEvent( DMAMUX_SOURCE_UART0_TX );
     NVIC_SET_PRIORITY( IRQ_DMA_CH0 + tx.channel, IRQ_PRIORITY );
     priority = NVIC_GET_PRIORITY( IRQ_DMA_CH0 + tx.channel );
     /****************************************************************

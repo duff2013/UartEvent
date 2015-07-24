@@ -1,7 +1,7 @@
 /*
  ||
  || @file       Uart3Event.cpp
- || @version 	6.4
+ || @version 	6.5
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  || @license
@@ -133,7 +133,7 @@ void Uart3Event::serial_dma_rx_isr( void ) {
         tail = rx_buffer_tail;
         if ( head >= tail ) bufferFree = head - tail;
         else bufferFree = RX_BUFFER_SIZE + head - tail;
-        if ( bufferFree == size_trigger ) {
+        if ( bufferFree >= size_trigger ) {
             NVIC_SET_PENDING( IRQ_UART2_STATUS );
             *elink = 1;
             return;
@@ -168,10 +168,7 @@ void Uart3Event::serial_dma_begin( uint32_t divisor ) {
     UART2_BDL = ( divisor >> 5 ) & 0xFF;
     UART2_C4 = divisor & 0x1F;
     UART2_C1 = 0;//UART_C1_ILT;
-    // TODO: Use UART2 fifo with dma
-    //UART2_TWFIFO = 1; // tx watermark, causes C5_TDMAS DMA request
-    //UART2_RWFIFO = 1; // rx watermark, causes C5_RDMAS DMA request
-    //UART2_PFIFO = UART_PFIFO_TXFE | UART_PFIFO_RXFE;
+    UART2_PFIFO = 0;
     UART2_C2 = C2_TX_INACTIVE;
     UART2_C5 = UART_DMA_ENABLE; // setup Serial1 tx,rx to use dma
     if ( loopBack ) UART2_C1 |= UART_C1_LOOPS; // Set internal loop1Back

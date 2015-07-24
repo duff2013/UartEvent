@@ -1,11 +1,15 @@
+><b>Updated (7/23/15 v6.5)</b><br>
+* Again thanks to Teensy forum user Barney -> https://forum.pjrc.com/members/36714-Barney for finding these issues.
+* Fixed baud rate generation for Uart2 and Uart3, they where using Uart1 "Baud2Div".
+
 ><b>Updated (7/14/15 v6.4)</b><br>
-* Thanks to user Teensy forum user Barney -> https://forum.pjrc.com/members/36714-Barney for finding these issues.
+* Thanks to Teensy forum user Barney -> https://forum.pjrc.com/members/36714-Barney for finding these issues.
 * Fixed rx buffer full, it was triggering every received byte before now it triggers when the buffer is actually full.
 * Fixed "Serial3" not working because the internal buffer was set which "Serial3" does not have.
 * Fixed all serial ports end function, reattaching wrong interrupt vector.
 
 ><b>Updated (4/13/15 v6.3)</b><br>
-  * New trigger for incoming data "rxBufferSizeTrigger", you can set a trigger for how much of the rx buffer is used before an event is triggered.
+  * New trigger for incoming data "rxBufferSizeTrigger", you can set a trigger for how of the rx buffer is used.
   * Renamed rxTermCharacter to rxTermCharacterTrigger.
   * Users RX/TX callbacks now is called from low priority ISR's'.
 

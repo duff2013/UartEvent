@@ -1,7 +1,7 @@
 /*
  ||
  || @file       Uart2Event.cpp
- || @version 	6.4
+ || @version 	6.5
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  || @license
@@ -130,7 +130,7 @@ void Uart2Event::serial_dma_rx_isr( void ) {
         tail = rx_buffer_tail;
         if ( head >= tail ) bufferFree = head - tail;
         else bufferFree = RX_BUFFER_SIZE + head - tail;
-        if ( bufferFree == size_trigger ) {
+        if ( bufferFree >= size_trigger ) {
             NVIC_SET_PENDING( IRQ_UART1_STATUS );
             *elink = 1;
             return;

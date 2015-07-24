@@ -1,6 +1,6 @@
 UartEvent
 =========
-<h3>Teensy 3.1 UartEvent Library v6.4</h3>
+<h3>Teensy 3.1 UartEvent Library v6.5</h3>
 
 <h5>This library is only intended for Teensy 3.1 Hardware Serial, (no USB) since it has enough DMA channels for all 3 serial ports. While you can use it with the Teensy 3.0 the limited memory and DMA channels make it more suited for the Teensy3.1. This is not for use with the USB Serial. Teensy LC is not supported.</h5>
 

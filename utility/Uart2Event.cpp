@@ -1,7 +1,7 @@
 /*
  ||
  || @file       Uart2Event.cpp
- || @version 	6.5
+ || @version 	6.6
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  || @license
@@ -257,7 +257,7 @@ void Uart2Event::serial_dma_putchar( uint32_t c ) {
     serial_dma_write( &c, 1 );
 }
 
-void Uart2Event::serial_dma_write( const void *buf, unsigned int count ) {
+int Uart2Event::serial_dma_write( const void *buf, unsigned int count ) {
     uint8_t * buffer = ( uint8_t * )buf;
     uint32_t head = tx_buffer_head;
     uint32_t cnt = count;

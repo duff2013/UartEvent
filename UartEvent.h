@@ -1,7 +1,7 @@
 /*
  ||
  || @file       UartEvent.h
- || @version 	6.5
+ || @version 	6.6
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  ||
@@ -35,22 +35,22 @@
 #ifdef __cplusplus
 
 #if(!defined(__MK20DX256__))
-#error "Teensy 3.1 Only!!!!"
+    #error "Teensy 3.1 Only!!!!"
 #endif
 
 #include "Arduino.h"
 #include "DMAChannel.h"
 #include "utility/Utils.h"
-///////////////////////////////////////////////////////////////////////////////
-#define TX0_BUFFER_SIZE 64 // Uart1 outgoing buffer size, must be power of 2 //
-#define RX0_BUFFER_SIZE 64 // Uart1 incoming buffer size, must be power of 2 //
-                                                                             //
-#define TX1_BUFFER_SIZE 64 // Uart2 outgoing buffer size, must be power of 2 //
-#define RX1_BUFFER_SIZE 64 // Uart2 incoming buffer size, must be power of 2 //
-                                                                             //
+////////////////////////////////////////////////////////////////////////////////
+#define TX0_BUFFER_SIZE 64 // Uart1 outgoing buffer size, must be power of 2  //
+#define RX0_BUFFER_SIZE 64 // Uart1 incoming buffer size, must be power of 2  //
+                                                                              //
+#define TX1_BUFFER_SIZE 64 // Uart2 outgoing buffer size, must be power of 2  //
+#define RX1_BUFFER_SIZE 64 // Uart2 incoming buffer size, must be power of 2  //
+                                                                              //
 #define TX2_BUFFER_SIZE 128 // Uart3 outgoing buffer size, must be power of 2 //
 #define RX2_BUFFER_SIZE 128 // Uart3 incoming buffer size, must be power of 2 //
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //---------------------------------------Uart1Event----------------------------------------
 class Uart1Event : public Stream {
 private:
@@ -70,7 +70,7 @@ private:
     void serial_dma_end              ( void );
     void serial_dma_set_transmit_pin ( uint8_t pin );
     void serial_dma_putchar          ( uint32_t c );
-    void serial_dma_write            ( const void *buf, unsigned int count );
+    int  serial_dma_write            ( const void *buf, unsigned int count );
     int  serial_dma_write_buffer_free( void );
     void serial_dma_flush            ( void );
     int  serial_dma_available        ( void );
@@ -121,13 +121,13 @@ public:
     virtual size_t write9bit        ( uint32_t c )      {  return 0; }
     
     virtual size_t write( const uint8_t *buffer, size_t size ) {
-        serial_dma_write( buffer, size );
-        return size;
+        int s = serial_dma_write( buffer, size );
+        return s;
     }
     virtual size_t write( const char *str ) {
         size_t len = strlen( str );
-        serial_dma_write( ( const uint8_t * )str, len );
-        return len;
+        int s = serial_dma_write( ( const uint8_t * )str, len );
+        return s;
     }
     bool loopBack;
     static volatile int rxTermCharacterTrigger;
@@ -156,7 +156,7 @@ private:
     void serial_dma_end              ( void );
     void serial_dma_set_transmit_pin ( uint8_t pin );
     void serial_dma_putchar          ( uint32_t c );
-    void serial_dma_write            ( const void *buf, unsigned int count );
+    int  serial_dma_write            ( const void *buf, unsigned int count );
     int  serial_dma_write_buffer_free( void );
     void serial_dma_flush            ( void );
     int  serial_dma_available        ( void );
@@ -207,13 +207,13 @@ public:
     virtual size_t write9bit        ( uint32_t c )      {  return 0; }
     
     virtual size_t write( const uint8_t *buffer, size_t size ) {
-        serial_dma_write( buffer, size );
-        return size;
+        int s = serial_dma_write( buffer, size );
+        return s;
     }
     virtual size_t write( const char *str ) {
         size_t len = strlen( str );
-        serial_dma_write( ( const uint8_t * )str, len );
-        return len;
+        int s = serial_dma_write( ( const uint8_t * )str, len );
+        return s;
     }
     bool loopBack;
     static volatile int rxTermCharacterTrigger;
@@ -242,7 +242,7 @@ private:
     void serial_dma_end              ( void );
     void serial_dma_set_transmit_pin ( uint8_t pin );
     void serial_dma_putchar          ( uint32_t c );
-    void serial_dma_write            ( const void *buf, unsigned int count );
+    int  serial_dma_write            ( const void *buf, unsigned int count );
     int  serial_dma_write_buffer_free( void );
     void serial_dma_flush            ( void );
     int  serial_dma_available        ( void );
@@ -293,13 +293,13 @@ public:
     virtual size_t write9bit        ( uint32_t c )      {  return 0; }
     
     virtual size_t write( const uint8_t *buffer, size_t size ) {
-        serial_dma_write( buffer, size );
-        return size;
+        int s = serial_dma_write( buffer, size );
+        return s;
     }
     virtual size_t write( const char *str ) {
         size_t len = strlen( str );
-        serial_dma_write( ( const uint8_t * )str, len );
-        return len;
+        int s = serial_dma_write( ( const uint8_t * )str, len );
+        return s;
     }
     bool loopBack;
     static volatile int rxTermCharacterTrigger;

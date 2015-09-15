@@ -1,7 +1,7 @@
 /*
  ||
  || @file       Uart1Event.cpp
- || @version 	6.5
+ || @version 	6.6
  || @author 	Colin Duffy
  || @contact 	http://forum.pjrc.com/members/25610-duff
  || @license
@@ -51,6 +51,7 @@ DMAMEM static volatile BUFTYPE __attribute__((aligned(RX_BUFFER_SIZE))) rx_buffe
 static volatile uint16_t tx_buffer_head = 0;
 static volatile uint16_t tx_buffer_tail = 0;
 #else
+#define TX_RETURN_TYPE uint8_t
 static volatile uint8_t tx_buffer_head  = 0;
 static volatile uint8_t tx_buffer_tail  = 0;
 #endif
@@ -258,7 +259,7 @@ void Uart1Event::serial_dma_putchar( uint32_t c ) {
     serial_dma_write( &c, 1 );
 }
 
-void Uart1Event::serial_dma_write( const void *buf, unsigned int count ) {
+int Uart1Event::serial_dma_write( const void *buf, unsigned int count ) {
     uint8_t * buffer = ( uint8_t * )buf;
     uint32_t head = tx_buffer_head;
     uint32_t cnt = count;
@@ -274,7 +275,7 @@ void Uart1Event::serial_dma_write( const void *buf, unsigned int count ) {
         head = over;
     }
     else {
-        memcpy_fast( tx_buffer+head, buffer, count );
+        memcpy_fast( tx_buffer+head, buffer, cnt );
         head += cnt;
     }
     tx_buffer_head = head;
@@ -286,6 +287,7 @@ void Uart1Event::serial_dma_write( const void *buf, unsigned int count ) {
         tx.enable( );
         __enable_irq( );
     }
+    return cnt;
 }
 
 void Uart1Event::serial_dma_flush( void ) {

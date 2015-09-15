@@ -1,3 +1,9 @@
+><b>Updated (9/14/15 v6.6)</b><br>
+* Thanks to Teensy forum user doughboy -> https://forum.pjrc.com/members/38767-doughboy for finding these issues.
+* Now return the number of bytes sucessfully sent since the driver can truncate user data if available buffer is to small.
+* Fixed Fill_Internal_Buffer_Time.ino for when compiled without optimizations and using printf for floating point values.
+* Fixed many warnings.
+
 ><b>Updated (7/23/15 v6.5)</b><br>
 * Again thanks to Teensy forum user Barney -> https://forum.pjrc.com/members/36714-Barney for finding these issues.
 * Fixed baud rate generation for Uart2 and Uart3, they where using Uart1 "Baud2Div".

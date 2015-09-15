@@ -1,7 +1,7 @@
 /*
  ||
  || @file 	    Utils.h
- || @version 	6.5
+ || @version 	6.6
  || @author 	Colin Duffy
  || @contact 	cmduffy@engr.psu.edu
  ||
@@ -40,9 +40,6 @@
 #define UART_DMA_ENABLE     UART_C5_TDMAS | UART_C5_RDMAS
 #define UART_DMA_DISABLE    0
 #define IRQ_PRIORITY        64  // 0 = highest priority, 255 = lowest
-
-#define UART_C5_TDMAS       (uint8_t)0x80
-#define UART_C5_RDMAS       (uint8_t)0x20
 
 #define C2_ENABLE           UART_C2_TE | UART_C2_RE | UART_C2_RIE | UART_C2_TIE;// | UART_C2_ILIE
 #define C2_TX_ACTIVE		C2_ENABLE | UART_C2_TIE

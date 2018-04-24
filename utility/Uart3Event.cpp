@@ -50,9 +50,11 @@ DMAMEM static volatile BUFTYPE __attribute__((aligned(RX_BUFFER_SIZE))) rx_buffe
 #if TX_BUFFER_SIZE > 255
 static volatile uint16_t tx_buffer_head = 0;
 static volatile uint16_t tx_buffer_tail = 0;
+static volatile bool     tx_buffer_empty = true;
 #else
 static volatile uint8_t tx_buffer_head  = 0;
 static volatile uint8_t tx_buffer_tail  = 0;
+static volatile bool    tx_buffer_empty = true;
 #endif
 #if RX_BUFFER_SIZE > 255
 static volatile uint16_t rx_buffer_head  = 0;
@@ -66,7 +68,6 @@ static volatile uint8_t rx_buffer_count = 0;
 
 static volatile uint8_t transmitting  = 0;
 static volatile uint8_t *transmit_pin = NULL;
-static volatile uint8_t BUFFER_FULL   = false;
 
 DMAChannel       Uart3Event::tx;
 DMAChannel       Uart3Event::rx;
@@ -93,7 +94,9 @@ void Uart3Event::serial_dma_tx_isr( void ) {
     if ( ( tail + ELINKNO ) >= TX_BUFFER_SIZE ) tail += ELINKNO - TX_BUFFER_SIZE;
     else tail += ELINKNO;
     
-    if ( head != tail ) {
+    if (tail == head) tx_buffer_empty = true;
+    
+    if ( !tx_buffer_empty ) {
         transmitting = true;
         int size;
         if ( tail > head ) size = ( TX_BUFFER_SIZE - tail ) + head;
@@ -244,6 +247,7 @@ void Uart3Event::serial_dma_end( void ) {
     CORE_PIN8_CONFIG = PORT_PCR_PE | PORT_PCR_PS | PORT_PCR_MUX( 1 );
     UART2_C5 = UART_DMA_DISABLE;
     tx_buffer_head = tx_buffer_tail = 0;
+    tx_buffer_empty = true;
 }
 
 void Uart3Event::serial_dma_set_transmit_pin( uint8_t pin ) {
@@ -258,6 +262,7 @@ void Uart3Event::serial_dma_putchar( uint32_t c ) {
 }
 
 int Uart3Event::serial_dma_write( const void *buf, unsigned int count ) {
+    if (count == 0) return 0;
     uint8_t * buffer = ( uint8_t * )buf;
     uint32_t head = tx_buffer_head;
     uint32_t cnt = count;
@@ -277,6 +282,7 @@ int Uart3Event::serial_dma_write( const void *buf, unsigned int count ) {
         head += cnt;
     }
     tx_buffer_head = head;
+    tx_buffer_empty = false;
     if ( !transmitting ) {
         transmitting = true;
         __disable_irq( );
@@ -290,13 +296,8 @@ int Uart3Event::serial_dma_write( const void *buf, unsigned int count ) {
 
 void Uart3Event::serial_dma_flush( void ) {
     // wait for any remainding dma transfers to complete
-    uint16_t head, tail;
     //raise_priority( );
-    do {
-        yield( );
-        head = tx_buffer_head;
-        tail = tx_buffer_tail;
-    } while ( head != tail );
+    while ( serial_dma_write_buffer_free() != TX_BUFFER_SIZE ) yield();
     while ( transmitting ) yield( );
     //lower_priority( );
 }
@@ -305,8 +306,9 @@ int Uart3Event::serial_dma_write_buffer_free( void ) {
     uint32_t head, tail;
     head = tx_buffer_head;
     tail = tx_buffer_tail;
-    if ( head >= tail ) return TX_BUFFER_SIZE - 1 - head + tail;
-    return tail - head - 1;
+    if ( (head == tail) && !tx_buffer_empty ) return 0;
+    if ( head >= tail ) return TX_BUFFER_SIZE - head + tail;
+    return tail - head;
 }
 
 int Uart3Event::serial_dma_available( void ) {

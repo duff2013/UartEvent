@@ -42,11 +42,11 @@
 #include "DMAChannel.h"
 #include "utility/Utils.h"
 ////////////////////////////////////////////////////////////////////////////////
-#define TX0_BUFFER_SIZE 64 // Uart1 outgoing buffer size, must be power of 2  //
-#define RX0_BUFFER_SIZE 64 // Uart1 incoming buffer size, must be power of 2  //
+#define TX0_BUFFER_SIZE 64  // Uart1 outgoing buffer size, must be power of 2 //
+#define RX0_BUFFER_SIZE 64  // Uart1 incoming buffer size, must be power of 2 //
                                                                               //
-#define TX1_BUFFER_SIZE 64 // Uart2 outgoing buffer size, must be power of 2  //
-#define RX1_BUFFER_SIZE 64 // Uart2 incoming buffer size, must be power of 2  //
+#define TX1_BUFFER_SIZE 64  // Uart2 outgoing buffer size, must be power of 2 //
+#define RX1_BUFFER_SIZE 64  // Uart2 incoming buffer size, must be power of 2 //
                                                                               //
 #define TX2_BUFFER_SIZE 128 // Uart3 outgoing buffer size, must be power of 2 //
 #define RX2_BUFFER_SIZE 128 // Uart3 incoming buffer size, must be power of 2 //
@@ -188,7 +188,7 @@ public:
     }
     virtual void begin( uint32_t baud, uint32_t format ) {
         serial_dma_format( format );
-        serial_dma_begin( BAUD2DIV( baud ) );
+        serial_dma_begin( BAUD2DIV2( baud ) );
     }
     virtual void   begin            ( uint32_t baud )   { serial_dma_begin( BAUD2DIV2( baud ) ); }
     virtual void   end              ( void )            { serial_dma_end( ); }
@@ -274,7 +274,7 @@ public:
     }
     virtual void begin( uint32_t baud, uint32_t format ) {
         serial_dma_format( format );
-        serial_dma_begin( BAUD2DIV( baud ) );
+        serial_dma_begin( BAUD2DIV3( baud ) );
     }
     virtual void   begin            ( uint32_t baud )   { serial_dma_begin( BAUD2DIV3( baud ) ); }
     virtual void   end              ( void )            { serial_dma_end( ); }

@@ -235,9 +235,9 @@ void Uart1Event::serial_dma_end( void ) {
     if ( !( SIM_SCGC6 & SIM_SCGC6_DMAMUX ) ) return;
     if ( !( SIM_SCGC4 & SIM_SCGC4_UART0 ) ) return;
     attachInterruptVector( IRQ_UART0_STATUS, uart0_status_isr );
+    NVIC_DISABLE_IRQ(IRQ_UART0_STATUS);
     // flush Uart1Event tx buffer
     flush( );
-    delay(20);
     /****************************************************************
      * serial1 end, from teensduino core, serial1.c
      ****************************************************************/

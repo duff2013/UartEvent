@@ -233,9 +233,9 @@ void Uart2Event::serial_dma_end( void ) {
     if ( !( SIM_SCGC6 & SIM_SCGC6_DMAMUX ) ) return;
     if ( !( SIM_SCGC4 & SIM_SCGC4_UART1 ) ) return;
     attachInterruptVector( IRQ_UART1_STATUS, uart1_status_isr );
+    NVIC_DISABLE_IRQ(IRQ_UART1_STATUS);
     // flush Uart2Event tx buffer
     flush( );
-    delay(20);
     /****************************************************************
      * serial1 end, from teensduino core, serial1.c
      ****************************************************************/
@@ -273,7 +273,7 @@ int Uart2Event::serial_dma_write( const void *buf, unsigned int count ) {
         head = over;
     }
     else {
-        memcpy_fast( tx_buffer+head, buffer, count );
+        memcpy_fast( tx_buffer+head, buffer, cnt );
         head += cnt;
     }
     tx_buffer_head = head;
@@ -285,6 +285,7 @@ int Uart2Event::serial_dma_write( const void *buf, unsigned int count ) {
         tx.enable( );
         __enable_irq( );
     }
+    return cnt;
 }
 
 void Uart2Event::serial_dma_flush( void ) {

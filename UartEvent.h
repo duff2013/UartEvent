@@ -188,7 +188,7 @@ public:
     }
     virtual void begin( uint32_t baud, uint32_t format ) {
         serial_dma_format( format );
-        serial_dma_begin( BAUD2DIV( baud ) );
+        serial_dma_begin( BAUD2DIV2( baud ) );
     }
     virtual void   begin            ( uint32_t baud )   { serial_dma_begin( BAUD2DIV2( baud ) ); }
     virtual void   end              ( void )            { serial_dma_end( ); }
@@ -274,7 +274,7 @@ public:
     }
     virtual void begin( uint32_t baud, uint32_t format ) {
         serial_dma_format( format );
-        serial_dma_begin( BAUD2DIV( baud ) );
+        serial_dma_begin( BAUD2DIV3( baud ) );
     }
     virtual void   begin            ( uint32_t baud )   { serial_dma_begin( BAUD2DIV3( baud ) ); }
     virtual void   end              ( void )            { serial_dma_end( ); }
